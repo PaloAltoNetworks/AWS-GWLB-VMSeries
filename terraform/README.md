@@ -9,7 +9,7 @@ You can deploy the **security_stack** and two sets of **app_stack** to bring up 
 <br />
 <br />
 <br />
-<img src="https://bitbucket.paloaltonetworks.local/users/rtiku/repos/aws/raw/vmseries-agw/topology.png?at=refs%2Fheads%2Fmaster"/>
+<img src="/topology.png"/>
 <br />
 <br />
 <br />
