@@ -9,7 +9,7 @@ You can deploy the **security_stack** and two sets of **app_stack** to bring up 
 <br />
 <br />
 <br />
-<img src="/topology.png"/>
+<img src="https://github.com/PaloAltoNetworks/AWS-AGW-VMSeries/raw/main/terraform/topology.png"/>
 <br />
 <br />
 <br />
@@ -135,7 +135,7 @@ You can deploy the **security_stack** and two sets of **app_stack** to bring up 
 4. Once ready, login to your firewall:
     - `ssh -i private_key.pem admin@<Firewall IP>`
     - `firewall_ip` can be found in Security Stack deployment output
-    - Once you have logged in, you will need to configure your firewall to allow traffic(<Link to this step in David's Doc>):
+    - Once you have logged in, you will need to configure your firewall to allow traffic:
         - Configure interface 'ethernet1/1' as layer 3 with DHCP 
         - Configure interface 'ethernet1/1' with a virtual router, zone and interface management profile.
         - This template configures a health checks(TCP over port 80) on the Target Group so configure the interface management profile(for ethernet1/1) on the firewall to accept this traffic.
