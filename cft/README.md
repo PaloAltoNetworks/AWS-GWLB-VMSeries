@@ -34,7 +34,7 @@ Template config:
 	
 DeviceGroup config:
 
-A. Under Security Pre-Rules: Create an 'allow_all' rule allowing all traffic.  Select 'any' for Source, User,
-   Destination, and Application.  Under 'Service/URL Category,' select 'any' (do not use 'application-default').
+	Under Security Pre-Rules: Create an 'allow_all' rule allowing all traffic.  Select 'any' for Source, User,
+   	Destination, and Application.  Under 'Service/URL Category,' select 'any' (do not use 'application-default').
 
 4. Add the delicense key of the firewall on the panorama. [Can be seen using :xxxx@Panorama> request license api-key show  on the panorama cli]
