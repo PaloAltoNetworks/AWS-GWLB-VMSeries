@@ -18,7 +18,6 @@ For panorama to perform the above functions we have to have the following condit
 2. As a good practice keep a set of DG and templatestack for each firewall stack .
 3. Configure the template on panorama with the following details and associate with corresponding templatestack: 
 			Template config:
-			===============
 			1. Configure Interfaces (ethernet1/1 on slot 1).  Set up interfaces as type Layer3 with DHCP.
                            Note: enable default gateway on the trust interface.
 			2. Create one Zone (trust)
