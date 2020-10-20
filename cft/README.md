@@ -1,11 +1,10 @@
 This is a auto-scaling template for paloalto firewalls on aws environment for supporting Load Balacer Gateway (GWLB).
 This "firewall" folder contains:
-1. template to deploy on the aws gui [firewall-new-vpc-v3.0.template]
-2. lambda functions for the solution [ init.py, fw_init.py, sched_evt1.py, sched_evt2.py, lib, dnslib, sha.py]
+1. Template to deploy on the aws gui [firewall-new-vpc-v3.0.template]
+2. Lambda functions for the solution [ init.py, fw_init.py, sched_evt1.py, sched_evt2.py, lib, dnslib, sha.py]
 3. init-cfg.txt with panorama bootstrapping information
 
-
-The requirements to get this working :
+Here are the requirements for successful deployment :
 
 Panorama:
 1. We need panorama to :
@@ -14,7 +13,6 @@ Panorama:
 	iii. delicense the firewalls
 
 For panorama to perform the above functions we have to have the following conditions satisfied:
-
 
 1. Panorama should allow AWS public IPs. Firewall will try to access Panorama from NAT GW external IP created by template. 
 2. As a good practice keep a set of DG and templatestack for each firewall stack .
