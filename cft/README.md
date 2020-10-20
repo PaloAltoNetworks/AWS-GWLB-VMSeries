@@ -19,6 +19,7 @@ For panorama to perform the above functions we have to have the following condit
 3. Configure the template on panorama with the following details and associate with corresponding templatestack:
 
 Template config:
+
 	A. Configure Interfaces (ethernet1/1 on slot 1). Set up interfaces as type Layer3 with DHCP.
    	Note: enable default gateway on the trust interface.
 	B. Create one zone (trust)
@@ -32,6 +33,7 @@ Template config:
 	with the pandemo/demopassword user).
 	
 DeviceGroup config:
+
 A. Under Security Pre-Rules: Create an 'allow_all' rule allowing all traffic.  Select 'any' for Source, User,
    Destination, and Application.  Under 'Service/URL Category,' select 'any' (do not use 'application-default').
 
