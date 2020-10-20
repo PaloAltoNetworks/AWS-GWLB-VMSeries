@@ -1,4 +1,4 @@
-This is a auto-scaling template for paloalto firewalls on aws environment for supporting Load Balacer Gateway (LBGW).
+This is a auto-scaling template for paloalto firewalls on aws environment for supporting Load Balacer Gateway (GWLB).
 This "firewall" folder contains:
 1. template to deploy on the aws gui [firewall-new-vpc-v3.0.template]
 2. lambda functions for the solution [ init.py, fw_init.py, sched_evt1.py, sched_evt2.py, lib, dnslib, sha.py]
