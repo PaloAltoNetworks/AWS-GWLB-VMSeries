@@ -16,8 +16,8 @@ You can deploy the **security_stack** and two sets of **app_stack** to bring up 
 ## Table of Contents
 1. Prerequisites
 2. Deploy Security Stack
-3. Deploy Application Stack
-4. Verify Traffic Inspection On VM-Series
+3. Deploy Application Stack (Optional)
+4. Verify Traffic Inspection On VM-Series (Optional)
 5. Support
 <br />
 <br />
@@ -198,7 +198,7 @@ You can deploy the **security_stack** and two sets of **app_stack** to bring up 
 <br />
 <br />
 
-## Inspect Traffic On VM-Series
+## Inspect Traffic On VM-Series (Optional)
 
 You can now inspect the traffic on VM-Series Firewall:
 
