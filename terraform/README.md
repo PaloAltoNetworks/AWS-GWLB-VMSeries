@@ -171,7 +171,7 @@ You can deploy the **security_stack** and two sets of **app_stack** to bring up 
 <br />
 <br />
 
-## Deploy Application Stack
+## Deploy Application Stack (Optional)
 1. You can now deploy a Sample Application stack to view the traffic flow.
 
 2. Setup the variables for the App Stack in app_stack/terraform.tfvars.
