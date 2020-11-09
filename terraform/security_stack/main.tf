@@ -1,7 +1,7 @@
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # CREATE ALL THE RESOURCES TO DEPLOY A SECURITY VPC
-# This template creates a Firewall Stack behind Appliance Gateway. The Security VPC will be a Transit Gateway Attachment
+# This template creates a Firewall Stack behind Gateway Load Balancer. The Security VPC will be a Transit Gateway Attachment
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

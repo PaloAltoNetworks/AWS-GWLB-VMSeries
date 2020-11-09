@@ -18,9 +18,9 @@ variable "region" {
   type = string
 }
 
-variable "availability_zone" {
-  description = "Availability zones in a region to deploy instances"
-  type = string
+variable "availability_zones" {
+  description = "Availability zones in a region to deploy instances on"
+  type = list
 }
 
 variable "vpc_cidr" {

@@ -28,13 +28,13 @@ variable "vpc_cidr" {
   type = string
 }
 
-variable "agwe_service_id" {
-  description = "Appliance Gateway Endpoint service ID. Ex. vpce-svc-0f65e953ecab61a23"
+variable "gwlbe_service_id" {
+  description = "Gateway Load Balancer Endpoint service ID. Ex. vpce-svc-0f65e953ecab61a23"
   type = string
 }
 
-variable "agwe_service_name" {
-  description = "Appliance Gateway Endpoint service name. Ex. com.amazonaws.vpce.sa-east-1.vpce-svc-0612d6a7defdde0c8"
+variable "gwlbe_service_name" {
+  description = "Gateway Load Balancer Endpoint service name. Ex. com.amazonaws.vpce.sa-east-1.vpce-svc-0612d6a7defdde0c8"
   type = string
 }
 
@@ -53,19 +53,34 @@ variable "tgw_sec_route_table_id" {
   type = string
 }
 
-variable "sec_agwe_route_table_id" {
-  description = "Security VPC AGWE Route Table ID"
-  type = string
+variable "sec_gwlbe_ob_route_table_id" {
+  description = "List of Security VPC GWLBE OB Route Table IDs"
+  type = list
+}
+
+variable "sec_gwlbe_ew_route_table_id" {
+  description = "List of Security VPC GWLBE EW Route Table IDs"
+  type = list
 }
 
 variable "natgw_route_table_id" {
-  description = "Security VPC NAT Gateway Route Table ID"
-  type = string
+  description = "List of Security VPC NAT Gateway Route Table IDs"
+  type = list
 }
 
-variable "sec_agwe_id" {
-  description = "Security VPC AGW Endpoint ID"
-  type = string
+variable "sec_gwlbe_ob_id" {
+  description = "List of Security VPC GWLB Endpoint IDs"
+  type = list
+}
+
+variable "sec_gwlbe_ew_id" {
+  description = "List of Security VPC GWLB Endpoint IDs"
+  type = list
+}
+
+variable "sec_tgwa_route_table_id" {
+  description = "List of Security VPC TGW Attachment Rout Table IDs"
+  type = list
 }
 
 variable "public_key" {

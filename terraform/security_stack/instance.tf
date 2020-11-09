@@ -1,33 +1,36 @@
 
 # ---------------------------------------------------------------------------------------------------------------------
 # CREATE NETWORK INTERFACES
-# 2 NETWORK INTERFACES (MGMT and DATA)
-# 1 EIP (MGMT)
+# 2 NETWORK INTERFACES (MGMT and DATA) for each AZ
+# 1 EIP (MGMT) for each  AZ
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_network_interface" "fw-mgmt-eni" {
-  subnet_id         = aws_subnet.sec_mgmt_subnet.id
+  count = length(var.availability_zones)
+  subnet_id         = aws_subnet.sec_mgmt_subnet[count.index].id
   security_groups   = [aws_security_group.fw-mgmt-sg.id]
   source_dest_check = "false"
   tags = {
-    Name = "fw-mgmt-eni-${random_id.deployment_id.hex}"
+    Name = "fw-mgmt-eni-${var.availability_zones[count.index]}-${random_id.deployment_id.hex}"
   }
 }
 
 resource "aws_network_interface" "fw-data-eni" {
-  subnet_id         = aws_subnet.sec_data_subnet.id
+  count = length(var.availability_zones)
+  subnet_id         = aws_subnet.sec_data_subnet[count.index].id
   security_groups   = [aws_security_group.fw-data-sg.id]
   source_dest_check = "false"
   tags = {
-    Name = "fw-data-eni-${random_id.deployment_id.hex}"
+    Name = "fw-data-eni-${var.availability_zones[count.index]}-${random_id.deployment_id.hex}"
   }
 }
 
 resource "aws_eip" "fw-mgmt-eip" {
+  count = length(var.availability_zones)
   vpc               = true
-  network_interface = aws_network_interface.fw-mgmt-eni.id
+  network_interface = aws_network_interface.fw-mgmt-eni[count.index].id
   tags = {
-    Name = "app-mgmt-eip-${random_id.deployment_id.hex}"
+    Name = "fw-mgmt-eip-${var.availability_zones[count.index]}-${random_id.deployment_id.hex}"
   }
   depends_on = [aws_network_interface.fw-mgmt-eni, aws_instance.firewall_instance]
 }
@@ -127,23 +130,24 @@ resource "aws_iam_instance_profile" "iam-instance-profile" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_instance" "firewall_instance" {
+  count = length(var.availability_zones)
   ami        = var.firewall_ami_id
   instance_type   = var.instance_type
 
   network_interface {
-    network_interface_id = aws_network_interface.fw-data-eni.id
+    network_interface_id = aws_network_interface.fw-data-eni[count.index].id
     device_index         = 0
   }
 
   network_interface {
-    network_interface_id = aws_network_interface.fw-mgmt-eni.id
+    network_interface_id = aws_network_interface.fw-mgmt-eni[count.index].id
     device_index         = 1
   }
   iam_instance_profile = aws_iam_instance_profile.iam-instance-profile.id
-  user_data = "mgmt-interface-swap=enable\nplugin-op-commands=aws-agw-inspect:enable\n${var.user_data}"
+  user_data = "mgmt-interface-swap=enable\nplugin-op-commands=aws-gwlb-inspect:enable\n${var.user_data}"
 
   key_name        = aws_key_pair.fw-ssh-keypair.key_name
   tags = {
-    Name = "fw-${random_id.deployment_id.hex}"
+    Name = "FW-${var.availability_zones[count.index]}-${random_id.deployment_id.hex}"
   }
 }

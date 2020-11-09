@@ -1,6 +1,6 @@
 
 # ---------------------------------------------------------------------------------------------------------------------
-# CREATE HAND-OFF FILE FOR PYTHON SCRIPT(Appliancce Gateway Deployment)
+# CREATE HAND-OFF FILE FOR PYTHON SCRIPT(Gateway Load Balancer Deployment)
 # ---------------------------------------------------------------------------------------------------------------------
 data "template_file" "handoff-state-file" {
   template = "${path.module}/handoff_state.json"
@@ -13,17 +13,20 @@ locals {
     "region" = var.region
     "deployment_id" = random_id.deployment_id.hex
     "sec_vpc" = aws_vpc.sec_vpc.id
-    "sec_data_subnet" = aws_subnet.sec_data_subnet.id
-    "sec_agwe_subnet" = aws_subnet.sec_agwe_subnet.id
-    "sec_tgwa_route_table_id" = aws_route_table.tgwa-rt.id
-    "instance_id" = aws_instance.firewall_instance.id
+    "sec_data_subnet" = aws_subnet.sec_data_subnet[*].id
+    "sec_agwe_subnet" = aws_subnet.sec_agwe_subnet[*].id
+    "sec_agwe_ew_subnet" = aws_subnet.sec_agwe_ew_subnet[*].id
+    "sec_tgwa_route_table_id" = aws_route_table.tgwa-rt[*].id
+    "instance_id" = aws_instance.firewall_instance[*].id
     "account_id" = aws_vpc.sec_vpc.owner_id
+    "tgw_sec_attach_id" = aws_ec2_transit_gateway_vpc_attachment.as.id
     "agw_arn" = ""
     "agw_tg_arn" = ""
     "agw_listener_arn" = ""
     "agwe_service_name" = ""
     "agwe_service_id" = ""
-    "agwe_id" = ""
+    "agwe_id" = []
+    "agwe_ew_id" = []
   })
 }
 
@@ -44,13 +47,13 @@ resource "null_resource" "handoff-state-json" {
 
 # ---------------------------------------------------------------------------------------------------------------------
 
-resource "null_resource" "appliance-gateway" {
+resource "null_resource" "gateway-load-balancer" {
   provisioner "local-exec" {
-    command = "python3 agw.py create"
+    command = "python3 gwlb.py create"
   }
   provisioner "local-exec" {
     when = destroy
-    command = "python3 agw.py destroy"
+    command = "python3 gwlb.py destroy"
   }
   depends_on = [null_resource.handoff-state-json, aws_instance.firewall_instance]
 }
@@ -59,7 +62,7 @@ resource "null_resource" "appliance-gateway" {
 # GET DATA FROM HANDOFF FILE
 # ---------------------------------------------------------------------------------------------------------------------
 
-data "local_file" "agw" {
+data "local_file" "gwlb" {
   filename = data.template_file.handoff-state-file.rendered
-  depends_on = [null_resource.appliance-gateway]
+  depends_on = [null_resource.gateway-load-balancer]
 }

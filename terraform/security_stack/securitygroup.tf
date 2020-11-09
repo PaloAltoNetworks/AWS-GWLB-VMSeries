@@ -31,15 +31,8 @@ resource "aws_security_group" "fw-mgmt-sg" {
 
 resource "aws_security_group" "fw-data-sg" {
   name        = "fw-data-sg-${random_id.deployment_id.hex}"
-  description = "Allow inbound traffic only from AGW"
+  description = "Allow inbound traffic only from GWLB"
   vpc_id      = aws_vpc.sec_vpc.id
-
-  ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = var.fw_mgmt_sg_list
-  }
 
   ingress {
     from_port   = 6081

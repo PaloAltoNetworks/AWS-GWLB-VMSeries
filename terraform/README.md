@@ -1,15 +1,15 @@
-# VM-Series Behind An Appliance Gateway
+# Palo Alto Networks VM-Series Integration with AWS Gateway Load Balancer
 
-This package will help you deploy a VM-Series behind an AWS Appliance Gateway using the **security_stack** terraform template to secure your Inbound, Outbound and East-West traffic.
+This package will help you deploy VM-Series behind an AWS Gateway Load Balancer using the **security_stack** terraform template to secure your Inbound, Outbound and East-West traffic.
 
-The **app_stack** is an optional deployment of a sample web application behind an Application Load Balancer.
+The **app_stack** is an optional deployment of a sample web application behind an Application Load Balancer to demonstrate the Traffic Flow.
 
 You can deploy the **security_stack** and two sets of **app_stack** to bring up a topology as stated in the diagram below.
 <br />
 <br />
 <br />
 <br />
-<img src="https://github.com/PaloAltoNetworks/AWS-AGW-VMSeries/raw/main/terraform/topology.png"/>
+<img src="https://github.com/PaloAltoNetworks/AWS-GWLB-VMSeries/raw/main/terraform/topology.png"/>
 <br />
 <br />
 <br />
@@ -29,9 +29,9 @@ You can deploy the **security_stack** and two sets of **app_stack** to bring up 
 
 ## Prerequisites
 
-1. To deploy this template, you would need the following from AWS:
-   - Your AWS account whitelisted for AWS Appliance Gateway Beta and
-   - AWS Appliance Gateway Beta Package (Containing Model json files).
+1. (FOR BETA CUSTOMERS ONLY, SKIP OTHERWISE) To deploy this template, you would need the following from AWS:
+   - Your AWS account whitelisted for AWS Gateway Load Balancer Beta and
+   - AWS Gateway Load Balancer Beta Package (Containing Model json files).
    
    Note: Reach out to AWS if you don't have the above two.
 2. Install Python 3.6.10
@@ -45,21 +45,21 @@ You can deploy the **security_stack** and two sets of **app_stack** to bring up 
     `terraform version`
     - This should point to Terraform v0.12.x
 4. Install the python requirements
-	- `pip3 install -r requirements.txt`
-5. Perform the AWS CLI model addition from AWS Appliance Gateway Beta Package:
+	- `pip3 install --upgrade -r requirements.txt`
+5. (FOR BETA CUSTOMERS ONLY, SKIP OTHERWISE) Perform the AWS CLI model addition from AWS Gateway Load Balancer Beta Package:
     - Configure AWS CLI with access key, secret key and region(AWS Beta whitelisted region)
     
     `aws configure`
     - Add custom model json files provided with AWS Beta package
     
-    `aws configure add-model --service-name elbv2-agw --service-model file://elbv2-agw.json` 
+    `aws configure add-model --service-name elbv2-gwlb --service-model file://elbv2-gwlb.json` 
     
-    `aws configure add-model --service-name ec2-agwe --service-model file://ec2-agw.json`
+    `aws configure add-model --service-name ec2-gwlbe --service-model file://ec2-gwlb.json`
     - To confirm, the following two files should exist
     
-    `~/.aws/models/elbv2-agw/2015-12-01/service-2.json` and 
+    `~/.aws/models/elbv2-gwlb/2015-12-01/service-2.json` and 
     
-    `~/.aws/models/ec2-agwe/2016-11-15/service-2.json`
+    `~/.aws/models/ec2-gwlbe/2016-11-15/service-2.json`
 5. Create a local ssh keypair to access instances deployed by this terraform deployment.
 	- Private Key: `openssl genrsa -out private_key.pem 2048`
 	- Change Permissions: `chmod 400 private_key.pem`
@@ -68,10 +68,10 @@ You can deploy the **security_stack** and two sets of **app_stack** to bring up 
     - Transit Gateway should use the following settings:
         - Default route table association: disable
         - Default route table propagation: disable
-    - The Transit gateway should exist in the region where AWS has enabled Appliance Gateway Beta. 
+    - (FOR BETA CUSTOMERS ONLY, SKIP OTHERWISE) The Transit gateway should exist in the region where AWS has enabled Gateway Load Balancer Beta. 
     - Note the Transit Gateway ID
 
-**With this, your environment is now ready to deploy VM-Series behind an AWS Appliance Gateway.** 
+**With this, your environment is now ready to deploy VM-Series in integration with AWS Gateway Load Balancer.** 
 
 <br />
 <br />
@@ -80,7 +80,8 @@ You can deploy the **security_stack** and two sets of **app_stack** to bring up 
 
 1. Setup the variables for Security stack in security_stack/terraform.tfvars. Some of them are explained below:
     1. Parameter(Mandatory) `vpc_cidr`:
-        - Use a /25 CIDR. This is an AWS Appliance Gateway Beta limitation.
+        - (FOR BETA CUSTOMERS ONLY, SKIP OTHERWISE) Use a /25 CIDR. This is an AWS Gateway Load Balancer Beta limitation.
+        - Use a /23 or bigger CIDR block. Ex. 10.0.0.0/16
     2. Parameter(Mandatory) `tgw_id`:
         - Use an Transit Gateway ID you noted in the Prerequisites Step 6.
         
@@ -99,7 +100,7 @@ You can deploy the **security_stack** and two sets of **app_stack** to bring up 
         
         If Option 2 is used, please make sure you have the following line in init-cfg.txt file:
         
-        `plugin-op-commands=aws-agw-inspect:enable`
+        `plugin-op-commands=aws-gwlb-inspect:enable`
     5. Parameter(Optional) `prefix`:
         - Use this parameter to prefix every resource with this string.
     6. Parameter(Optional) `fw_mgmt_sg_list` and `app_mgmt_sg_list`:
@@ -114,20 +115,43 @@ You can deploy the **security_stack** and two sets of **app_stack** to bring up 
     - You will see the output of the deployment once it is complete.
     - The output will look like:
     ```
-    agw_arn = <Appliance Gateway ARN>
-    agw_listener_arn = <Listener ARN>
-    agw_tg_arn = <Target Group ARN>
-    agwe_service_id = vpce-svc-xx
-    agwe_service_name = com.amazonaws.vpce.<region>.vpce-svc-xx
     deployment_id = <prefix-id>
-    firewall_ip = <Firewall Management IP>
-    natgw_route_table_id = rtb-xx
-    sec_agwe_id = vpce-xx
-    sec_agwe_route_table_id = rtb-xx
-    tgw_id = tgw-xx
-    tgw_sec_attach_id = tgw-attach-xx
-    tgw_sec_route_table_id = tgw-rtb-xx
-    tgwa_route_table_id = rtb-xx
+    firewall_ip = [
+        <Firewall Management IP>,
+        <Firewall Management IP>,
+    ]
+    gwlb_arn = <Gateway Load Balancer ARN>
+    gwlb_listener_arn = <Listener ARN>
+    gwlb_tg_arn = <Target Group ARN>
+    gwlbe_service_id = <VPC Endpoint Service ID>
+    gwlbe_service_name = <VPC Endpoint Service Name>
+    natgw_route_table_id = [
+        <NAT Gateway Route Table ID>,
+        <NAT Gateway Route Table ID>,
+    ]
+    sec_gwlbe_ew_id = [
+        <East-West VPC Endpoint ID>,
+        <East-West VPC Endpoint ID>,
+    ]
+    sec_gwlbe_ew_route_table_id = [
+        <East-West Endpoint Route Table ID>,
+        <East-West Endpoint Route Table ID>,
+    ]
+    sec_gwlbe_ob_id = [
+        <Outbound VPC Endpoint ID>,
+        <Outbound VPC Endpoint ID>,
+    ]
+    sec_gwlbe_ob_route_table_id = [
+        <Outbound Endpoint Route Table ID>,
+        <Outbound Endpoint Route Table ID>,
+    ]
+    sec_tgwa_route_table_id = [
+        <Transit Gateway Attachment Subnet Route Table ID>,
+        <Transit Gateway Attachment Subnet Route Table ID>,
+    ]
+    tgw_id = <Transit Gateway ID>
+    tgw_sec_attach_id = <Transit Gateway Security VPC Attachment ID>
+    tgw_sec_route_table_id = <Transit Gateway Security Route Table ID>
    ```
 
 3. Wait for VM Series Firewall to boot up. It can take a few minutes based on the `user_data` passed to the terraform.
@@ -162,10 +186,10 @@ You can deploy the **security_stack** and two sets of **app_stack** to bring up 
     - You will see the output of the deployment once it is complete.
     - The output will look like:
     ```
-    app_agwe_id = vpce-xx
+    app_gwlbe_id = <Inbound VPC Endpoint ID>
     app_fqdn = <Application Load Balancer FQDN>
-    app_mgmt_ip = <Application Management IP>
-    deployment_id = <prefix-id>
+    app_mgmt_ip = <Application Instance Management IP>
+    deployment_id = <Prefix-ID>
     ```
     - Once deployed the Application will be ready in a few minutes.
 
@@ -204,7 +228,7 @@ You can now inspect the traffic on VM-Series Firewall:
     cd app_stack_2
     rm -rf *.tfstate
     ```
-    - Setup the variables and deploy another application stack(Follow [Application Stack Steps 7-8](#Deploy Application Stack))
+    - Setup the variables and deploy another application stack(Follow [Application Stack Steps](#Deploy Application Stack))
     - Make sure App 1 and App2 deployments have different `vpc_cidr`.
     - Once deployed, wait for the application instance to boot up.
     - Login to your new Application Instance (APP 2)

@@ -10,7 +10,7 @@ data "aws_ec2_transit_gateway" "panw-tgw"{
 }
 
 resource "aws_ec2_transit_gateway_vpc_attachment" "as" {
-  subnet_ids = [aws_subnet.sec_tgwa_subnet.id]
+  subnet_ids = aws_subnet.sec_tgwa_subnet[*].id
   transit_gateway_id = data.aws_ec2_transit_gateway.panw-tgw.id
   vpc_id = aws_vpc.sec_vpc.id
   transit_gateway_default_route_table_association = "false"
@@ -18,6 +18,7 @@ resource "aws_ec2_transit_gateway_vpc_attachment" "as" {
   tags = {
     Name = "security-tgwa-${random_id.deployment_id.hex}"
   }
+  depends_on = [aws_subnet.sec_tgwa_subnet]
 }
 
 resource "aws_ec2_transit_gateway_route_table" "tgw-main-sec-rt" {
