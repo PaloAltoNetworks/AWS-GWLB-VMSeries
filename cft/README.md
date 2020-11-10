@@ -1,3 +1,9 @@
+# AWS-GWLB-VMSeries
+
+This repository contains CFT and TF templates for deploying VM-Series Firewalls behind AWS Gateway Load Balancer.
+
+[VM-Series with AWS Gateway Load Balancer Documentation](https://github.com/PaloAltoNetworks/AWS-GWLB-VMSeries/blob/main/cft/VM-Series-with-GWLB-CFT-Deployment-Guide.pdf)
+
 This is a auto-scaling template for paloalto firewalls on aws environment for supporting Load Balacer Gateway (GWLB).
 This "firewall" folder contains:
 1. Template to deploy on the aws gui [firewall-new-vpc-v3.0.template]
