@@ -29,46 +29,26 @@ You can deploy the **security_stack** and two sets of **app_stack** to bring up 
 
 ## Prerequisites
 
-1. (FOR BETA CUSTOMERS ONLY, SKIP OTHERWISE) To deploy this template, you would need the following from AWS:
-   - Your AWS account whitelisted for AWS Gateway Load Balancer Beta and
-   - AWS Gateway Load Balancer Beta Package (Containing Model json files).
-   
-   Note: Reach out to AWS if you don't have the above two.
-2. Install Python 3.6.10
+1. Install Python 3.6.10
 	- Confirm the installation 
 	
 	`python3 --version`
 	- This should point to Python 3.6
-3. Install Terraform 0.12
+2. Install Terraform 0.12
     - Confirm the installation
     
     `terraform version`
     - This should point to Terraform v0.12.x
-4. Install the python requirements
+3. Install the python requirements
 	- `pip3 install --upgrade -r requirements.txt`
-5. (FOR BETA CUSTOMERS ONLY, SKIP OTHERWISE) Perform the AWS CLI model addition from AWS Gateway Load Balancer Beta Package:
-    - Configure AWS CLI with access key, secret key and region(AWS Beta whitelisted region)
-    
-    `aws configure`
-    - Add custom model json files provided with AWS Beta package
-    
-    `aws configure add-model --service-name elbv2-gwlb --service-model file://elbv2-gwlb.json` 
-    
-    `aws configure add-model --service-name ec2-gwlbe --service-model file://ec2-gwlb.json`
-    - To confirm, the following two files should exist
-    
-    `~/.aws/models/elbv2-gwlb/2015-12-01/service-2.json` and 
-    
-    `~/.aws/models/ec2-gwlbe/2016-11-15/service-2.json`
-5. Create a local ssh keypair to access instances deployed by this terraform deployment.
+4. Create a local ssh keypair to access instances deployed by this terraform deployment.
 	- Private Key: `openssl genrsa -out private_key.pem 2048`
 	- Change Permissions: `chmod 400 private_key.pem`
 	- Public Key: `ssh-keygen -y -f private_key.pem > public_key.pub`
-6. To support East West and Outbound Traffic, use an existing or create a new Transit Gateway on your AWS account
+5. To support East West and Outbound Traffic, use an existing or create a new Transit Gateway on your AWS account
     - Transit Gateway should use the following settings:
         - Default route table association: disable
         - Default route table propagation: disable
-    - (FOR BETA CUSTOMERS ONLY, SKIP OTHERWISE) The Transit gateway should exist in the region where AWS has enabled Gateway Load Balancer Beta. 
     - Note the Transit Gateway ID
 
 **With this, your environment is now ready to deploy VM-Series in integration with AWS Gateway Load Balancer.** 
@@ -80,14 +60,13 @@ You can deploy the **security_stack** and two sets of **app_stack** to bring up 
 
 1. Setup the variables for Security stack in security_stack/terraform.tfvars. Some of them are explained below:
     1. Parameter(Mandatory) `vpc_cidr`:
-        - (FOR BETA CUSTOMERS ONLY, SKIP OTHERWISE) Use a /25 CIDR. This is an AWS Gateway Load Balancer Beta limitation.
         - Use a /23 or bigger CIDR block. Ex. 10.0.0.0/16
     2. Parameter(Mandatory) `tgw_id`:
-        - Use an Transit Gateway ID you noted in the Prerequisites Step 6.
+        - Use an Transit Gateway ID you noted in the Prerequisites Step 5.
         
         Ex. `tgw_id = "tgw-0xxxxxxxxx"` 
     3. Parameter(Mandatory) `public_key`:
-        - Use the contents of public key created in Prerequisites Step 5 as parameter value.
+        - Use the contents of public key created in Prerequisites Step 4 as parameter value.
         
         Ex. `public_key="ssh-rsa xxxxxxxxxx"`
     4. Parameter(Optional) `user_data`:
@@ -237,6 +216,10 @@ You can now inspect the traffic on VM-Series Firewall:
     - Execute the following command:
     `curl http://<APP 1 Private IP>`
     - This East-West traffic coming from the App 2 and destined to App 1 goes via the Transit gateway to be inspected by the Firewall.
+
+4. Inbound, Outbound and East-West Traffic isolation (Advanced):
+    - To isolate your inbound, outbound and east-west traffic, you can associate specific endpoints to sub-interfaces.
+    - Follow the document to learn more about this feature: [Associate a VPC-Endpoint with a VM-Series Sub-interface](https://docs.paloaltonetworks.com/vm-series/10-0/vm-series-deployment/set-up-the-vm-series-firewall-on-aws/vm-series-integration-with-gateway-load-balancer/integrate-the-vm-series-with-an-aws-gateway-load-balancer/associate-a-vpc-endpoint-with-a-vm-series-interface.html)
 
 **With this you inspected Inbound, Outbound and East-West traffic on the Application with VM-Series Firewall.**
 
