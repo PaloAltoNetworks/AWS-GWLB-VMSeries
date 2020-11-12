@@ -104,6 +104,8 @@ Parameters:
       More information follow this link: https://docs.paloaltonetworks.com/vm-series/10-0/vm-series-performance-capacity/vm-series-performance-capacity/vm-series-on-aws-models-and-instances.html
     Type: String
     AllowedValues:
+      - m3.xlarge
+      - m3.2xlarge
       - m4.xlarge
       - m4.2xlarge
       - m4.4xlarge
@@ -111,10 +113,31 @@ Parameters:
       - m5.xlarge
       - m5.2xlarge
       - m5.4xlarge
+      - m5.12xlarge
+      - m5.24xlarge
       - m5n.large
       - m5n.xlarge
       - m5n.2xlarge
       - m5n.4xlarge
+      - m5n.8xlarge
+      - c3.xlarge
+      - c3.2xlarge
+      - c3.4xlarge
+      - c3.8xlarge
+      - c4.xlarge
+      - c4.2xlarge
+      - c4.4xlarge
+      - c4.8xlarge
+      - c5.xlarge
+      - c5.2xlarge
+      - c5.4xlarge
+      - c5.9xlarge
+      - c5.18xlarge
+      - c5n.xlarge
+      - c5n.2xlarge
+      - c5n.4xlarge
+      - c5n.9xlarge
+      - c5n.18xlarge
     Default: m5.xlarge
 
   VMSeriesAMI:
