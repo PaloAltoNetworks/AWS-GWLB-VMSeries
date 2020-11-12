@@ -1,8 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
 Description: >-
-  Security VPC Deployment:
-  Palo Alto Networks VM-Series Deployment with Amazon Web Servers Gateway Load Balancer (GWLB)
+  Security VPC Deployment: VM-Series Deployment with AWS Gateway Load Balancer (GWLB)
 
 # ======================================================================================================================
 #   Parameters
@@ -122,7 +121,7 @@ Parameters:
     Description: >-
       AMI reference in the format 'ami-00000000000' for PAN-OS v10.0.2 or above.
     Type: String
-    Default: ami-0df4dc8cf64b83285
+    Default: ami-06cb3ae59e4c46288
     AllowedPattern: ami-\w{1,30}
     ConstraintDescription: Must be a valid AMI (e.g. ami-0a00a3780ec15f108)
 
@@ -475,58 +474,46 @@ Resources:
       GatewayId: !Ref SecurityIGW
 
   NATGWClassARouteAZ1:
-    DependsOn: GWLBEService
-    Type: Custom::AddRoute
+    Type: AWS::EC2::Route
     Properties:
-      ServiceToken: !GetAtt AddRouteLambda.Arn
       RouteTableId: !Ref NATGWRouteTableAZ1
-      EniId: !Select [ 0, !GetAtt GWLBEAZ1.NetworkInterfaceIds ]
-      Route: 10.0.0.0/8
+      DestinationCidrBlock: 10.0.0.0/8
+      VpcEndpointId: !Ref GWLBEAZ1
 
   NATGWClassBRouteAZ1:
-    DependsOn: GWLBEService
-    Type: Custom::AddRoute
+    Type: AWS::EC2::Route
     Properties:
-      ServiceToken: !GetAtt AddRouteLambda.Arn
       RouteTableId: !Ref NATGWRouteTableAZ1
-      EniId: !Select [ 0, !GetAtt GWLBEAZ1.NetworkInterfaceIds ]
-      Route: 172.16.0.0/12
+      DestinationCidrBlock: 172.16.0.0/12
+      VpcEndpointId: !Ref GWLBEAZ1
 
   NATGWClassCRouteAZ1:
-    DependsOn: GWLBEService
-    Type: Custom::AddRoute
+    Type: AWS::EC2::Route
     Properties:
-      ServiceToken: !GetAtt AddRouteLambda.Arn
       RouteTableId: !Ref NATGWRouteTableAZ1
-      EniId: !Select [ 0, !GetAtt GWLBEAZ1.NetworkInterfaceIds ]
-      Route: 192.168.0.0/16
+      DestinationCidrBlock: 192.168.0.0/16
+      VpcEndpointId: !Ref GWLBEAZ1
 
   NATGWClassARouteAZ2:
-    DependsOn: GWLBEService
-    Type: Custom::AddRoute
+    Type: AWS::EC2::Route
     Properties:
-      ServiceToken: !GetAtt AddRouteLambda.Arn
       RouteTableId: !Ref NATGWRouteTableAZ2
-      EniId: !Select [ 0, !GetAtt GWLBEAZ2.NetworkInterfaceIds ]
-      Route: 10.0.0.0/8
+      DestinationCidrBlock: 10.0.0.0/8
+      VpcEndpointId: !Ref GWLBEAZ2
 
   NATGWClassBRouteAZ2:
-    DependsOn: GWLBEService
-    Type: Custom::AddRoute
+    Type: AWS::EC2::Route
     Properties:
-      ServiceToken: !GetAtt AddRouteLambda.Arn
       RouteTableId: !Ref NATGWRouteTableAZ2
-      EniId: !Select [ 0, !GetAtt GWLBEAZ2.NetworkInterfaceIds ]
-      Route: 172.16.0.0/12
+      DestinationCidrBlock: 172.16.0.0/12
+      VpcEndpointId: !Ref GWLBEAZ2
 
   NATGWClassCRouteAZ2:
-    DependsOn: GWLBEService
-    Type: Custom::AddRoute
+    Type: AWS::EC2::Route
     Properties:
-      ServiceToken: !GetAtt AddRouteLambda.Arn
       RouteTableId: !Ref NATGWRouteTableAZ2
-      EniId: !Select [ 0, !GetAtt GWLBEAZ2.NetworkInterfaceIds ]
-      Route: 192.168.0.0/16
+      DestinationCidrBlock: 192.168.0.0/16
+      VpcEndpointId: !Ref GWLBEAZ2
 
   NATGWRouteTableAssociationAZ1:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -561,22 +548,18 @@ Resources:
           Value: !Join ['-' , [!Ref "AWS::StackName", 'TGW-AZ2']]
 
   TGWDefaultRouteAZ1:
-    DependsOn: GWLBEService
-    Type: Custom::AddRoute
+    Type: AWS::EC2::Route
     Properties:
-      ServiceToken: !GetAtt AddRouteLambda.Arn
       RouteTableId: !Ref TGWRouteTableAZ1
-      EniId: !Select [ 0, !GetAtt GWLBEAZ1.NetworkInterfaceIds ]
-      Route: 0.0.0.0/0
+      DestinationCidrBlock: 0.0.0.0/0
+      VpcEndpointId: !Ref GWLBEAZ1
 
   TGWDefaultRouteAZ2:
-    DependsOn: GWLBEService
-    Type: Custom::AddRoute
+    Type: AWS::EC2::Route
     Properties:
-      ServiceToken: !GetAtt AddRouteLambda.Arn
       RouteTableId: !Ref TGWRouteTableAZ2
-      EniId: !Select [ 0, !GetAtt GWLBEAZ2.NetworkInterfaceIds ]
-      Route: 0.0.0.0/0
+      DestinationCidrBlock: 0.0.0.0/0
+      VpcEndpointId: !Ref GWLBEAZ2
 
   TGWRouteTableAssociationAZ1:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -987,7 +970,7 @@ Resources:
               - dns-primary=
               - dns-secondary=
               - op-command-modes=jumbo-frame, mgmt-interface-swap
-              - plugin-op-commands=aws-agw-inspect:enable
+              - plugin-op-commands=aws-gwlb-inspect:enable
               - op-cmd-dpdk-pkt-io=on
               - dhcp-send-hostname=yes
               - dhcp-send-client-id=yes
@@ -1042,7 +1025,7 @@ Resources:
               - dns-primary=
               - dns-secondary=
               - op-command-modes=jumbo-frame, mgmt-interface-swap
-              - plugin-op-commands=aws-agw-inspect:enable
+              - plugin-op-commands=aws-gwlb-inspect:enable
               - op-cmd-dpdk-pkt-io=on
               - dhcp-send-hostname=yes
               - dhcp-send-client-id=yes
@@ -1063,107 +1046,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Join [ '-' , [ !Ref "AWS::StackName", 'SecurityVPC'] ]
-
-# ----------------------------------------------------------------------------------------------------------------------
-# Lambda for VPCE Route Addition - Workaround for Route Addition Failure for VPCE ENIs
-# ----------------------------------------------------------------------------------------------------------------------
-
-  AddRouteLambdaExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - lambda.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Path: /
-      Policies:
-        - PolicyName: root
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: arn:aws:logs:*:*:*
-              - Effect: Allow
-                Action:
-                  - ec2:CreateRoute
-                Resource: "*"
-
-  AddRouteLambda:
-    Type: AWS::Lambda::Function
-    Properties:
-      Handler: "index.handler"
-      Role: !GetAtt
-        - AddRouteLambdaExecutionRole
-        - Arn
-      Code:
-        ZipFile: |
-          import boto3
-          import cfnresponse
-          import json
-          import logging
-
-          def handler(event, context):
-
-            logger = logging.getLogger()
-            logger.setLevel(logging.INFO)
-            responseData = {}
-            responseStatus = cfnresponse.FAILED
-            logger.info('Received event: {}'.format(json.dumps(event)))
-
-            if event["RequestType"] == "Delete":
-              responseStatus = cfnresponse.SUCCESS
-              cfnresponse.send(event, context, responseStatus, responseData)
-
-            if event["RequestType"] == "Create":
-
-              # Get Route Table Id
-              try:
-                RouteTableId = event["ResourceProperties"]["RouteTableId"]
-              except Exception as e:
-                logger.info('Route Table ID retrieval failure: {}'.format(e))
-
-              # Get Eni Id
-              try:
-                EniId = event["ResourceProperties"]["EniId"]
-              except Exception as e:
-                logger.info('ENI ID retrieval failure: {}'.format(e))
-
-              # Route
-              try:
-                Route = event["ResourceProperties"]["Route"]
-              except Exception as e:
-                logger.info('Route retrieval failure: {}'.format(e))
-
-              # Create Boto3 Client Connection
-              try:
-                ec2_client = boto3.client('ec2')
-              except Exception as e:
-                logger.info('boto3.client failure: {}'.format(e))
-
-              # Add EC2 Route
-              try:
-                response = ec2_client.create_route(
-                  DestinationCidrBlock=Route,
-                  NetworkInterfaceId=EniId,
-                  RouteTableId=RouteTableId,
-                )
-              except Exception as e:
-                logger.info('route addition failure: {}'.format(e))
-
-              responseStatus = cfnresponse.SUCCESS
-              cfnresponse.send(event, context, responseStatus, responseData)
-
-      Runtime: python3.7
-      Timeout: 60
 
 # ----------------------------------------------------------------------------------------------------------------------
 #   VM-Series Bootstrap IAM Role
