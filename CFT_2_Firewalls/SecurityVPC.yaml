@@ -23,7 +23,7 @@ Parameters:
 
   SecurityVPCCIDR:
     Description: >-
-      CIDR Address Range for SecurityVPC for Beta this must be no greater than a /25 network. (e.g. 10.0.0.0/25)
+      CIDR Address Range for SecurityVPC (e.g. 10.0.0.0/25)
     Type: String
     Default: 10.0.0.0/25
     AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/25
@@ -33,7 +33,7 @@ Parameters:
 
   SecurityVPCNATGWSubnetCIDRAZ1:
     Description: >-
-      CIDR for NAT Gateway Subnet for Beta this must be no greater than a /28 network. (e.g. 10.0.0.0/28)
+      CIDR for NAT Gateway Subnet (e.g. 10.0.0.0/28)
     Type: String
     Default: 10.0.0.0/28
     AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/28
@@ -41,7 +41,7 @@ Parameters:
 
   SecurityVPCGWLBESubnetCIDRAZ1:
     Description: >-
-      CIDR for GWLBE Subnet for Beta this must be no greater than a /28 network. (e.g. 10.0.0.16/28)
+      CIDR for GWLBE Subnet (e.g. 10.0.0.16/28)
     Type: String
     Default: 10.0.0.16/28
     AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/28
@@ -49,7 +49,7 @@ Parameters:
 
   SecurityVPCTGWSubnetCIDRAZ1:
     Description: >-
-      CIDR for TGW Subnet for Beta this must be no greater than a /28 network. (e.g. 10.0.0.32/28)
+      CIDR for TGW Subnet (e.g. 10.0.0.32/28)
     Type: String
     Default: 10.0.0.32/28
     AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/28
@@ -57,7 +57,7 @@ Parameters:
 
   SecurityVPCVMSeriesDataSubnetCIDRAZ1:
     Description: >-
-      CIDR for VMSeries Data Subnet for Beta this must be no greater than a /28 network. (e.g. 10.0.0.48/28)
+      CIDR for VMSeries Data Subnet (e.g. 10.0.0.48/28)
     Type: String
     Default: 10.0.0.48/28
     AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/28
@@ -67,7 +67,7 @@ Parameters:
 
   SecurityVPCNATGWSubnetCIDRAZ2:
     Description: >-
-      CIDR for NAT Gateway Subnet for Beta this must be no greater than a /28 network. (e.g. 10.0.0.64/28)
+      CIDR for NAT Gateway Subnet (e.g. 10.0.0.64/28)
     Type: String
     Default: 10.0.0.64/28
     AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/28
@@ -414,7 +414,6 @@ Resources:
       TransitGatewayId: !Ref TGWID
     DependsOn: TGWSecurityAttachment
 
-
   GWLBERouteTableAZ2:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -462,6 +461,7 @@ Resources:
       DestinationCidrBlock: 192.168.0.0/16
       TransitGatewayId: !Ref TGWID
     DependsOn: TGWSecurityAttachment
+
 # ----------------------------------------------------------------------------------------------------------------------
 # Route Tables - SecurityVPC - Nat Gateway
 # ----------------------------------------------------------------------------------------------------------------------
