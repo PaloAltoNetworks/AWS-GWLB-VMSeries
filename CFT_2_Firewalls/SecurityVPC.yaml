@@ -23,11 +23,11 @@ Parameters:
 
   SecurityVPCCIDR:
     Description: >-
-      CIDR Address Range for SecurityVPC (e.g. 10.0.0.0/25)
+      CIDR Address Range for SecurityVPC (e.g. 10.0.0.0/24)
     Type: String
-    Default: 10.0.0.0/25
-    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/25
-    ConstraintDescription: Must be in a /25 CIDR (e.g. 192.168.0.0/25)
+    Default: 10.0.0.0/24
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: Must be in a CIDR (e.g. 192.168.0.0/25)
 
   # AZ1 Subnets CIDRs
 
@@ -36,32 +36,32 @@ Parameters:
       CIDR for NAT Gateway Subnet (e.g. 10.0.0.0/28)
     Type: String
     Default: 10.0.0.0/28
-    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/28
-    ConstraintDescription: Must be in a /28 CIDR (e.g. 192.168.0.0/28)
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: Must be in a CIDR (e.g. 192.168.0.0/28)
 
   SecurityVPCGWLBESubnetCIDRAZ1:
     Description: >-
       CIDR for GWLBE Subnet (e.g. 10.0.0.16/28)
     Type: String
     Default: 10.0.0.16/28
-    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/28
-    ConstraintDescription: Must be in a /28 CIDR (e.g. 192.168.0.0/28)
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: Must be in a CIDR (e.g. 192.168.0.0/28)
 
   SecurityVPCTGWSubnetCIDRAZ1:
     Description: >-
       CIDR for TGW Subnet (e.g. 10.0.0.32/28)
     Type: String
     Default: 10.0.0.32/28
-    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/28
-    ConstraintDescription: Must be in a /28 CIDR (e.g. 192.168.0.0/28)
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: Must be in a CIDR (e.g. 192.168.0.0/28)
 
   SecurityVPCVMSeriesDataSubnetCIDRAZ1:
     Description: >-
       CIDR for VMSeries Data Subnet (e.g. 10.0.0.48/28)
     Type: String
     Default: 10.0.0.48/28
-    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/28
-    ConstraintDescription: Must be in a /28 CIDR (e.g. 192.168.0.0/28)
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: Must be in a CIDR (e.g. 192.168.0.0/28)
 
 # AZ2 Subnets CIDRs
 
@@ -70,32 +70,32 @@ Parameters:
       CIDR for NAT Gateway Subnet (e.g. 10.0.0.64/28)
     Type: String
     Default: 10.0.0.64/28
-    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/28
-    ConstraintDescription: Must be in a /28 CIDR (e.g. 192.168.0.0/28)
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: Must be in a CIDR (e.g. 192.168.0.0/28)
 
   SecurityVPCGWLBESubnetCIDRAZ2:
     Description: >-
       CIDR for GWLBE Subnet (/28)
     Type: String
     Default: 10.0.0.80/28
-    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/28
-    ConstraintDescription: Must be in a /28 CIDR (e.g. 192.168.0.0/28)
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: Must be in a CIDR (e.g. 192.168.0.0/28)
 
   SecurityVPCTGWSubnetCIDRAZ2:
     Description: >-
       CIDR for TGW Subnet (/28)
     Type: String
     Default: 10.0.0.96/28
-    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/28
-    ConstraintDescription: Must be in a /28 CIDR (e.g. 192.168.0.0/28)
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: Must be in a CIDR (e.g. 192.168.0.0/28)
 
   SecurityVPCVMSeriesDataSubnetCIDRAZ2:
     Description: >-
       CIDR for VMSeries Data Subnet (/28)
     Type: String
     Default: 10.0.0.112/28
-    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/28
-    ConstraintDescription: Must be in a /28 CIDR (e.g. 192.168.0.0/28)
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: Must be in a CIDR (e.g. 192.168.0.0/28)
 
 # VM-Series Instance
 
@@ -214,23 +214,23 @@ Metadata:
       TGWID:
         default: "Specify which AWS Transit Gateway to attach to:"
       SecurityVPCCIDR:
-        default: "IP CIDR for the Security VPC (Max of /25)"
+        default: "IP CIDR for the Security VPC"
       SecurityVPCNATGWSubnetCIDRAZ1:
-        default: "IP CIDR for NAT GW Subnet in AZ1 (/28)"
+        default: "IP CIDR for NAT GW Subnet in AZ1"
       SecurityVPCNATGWSubnetCIDRAZ2:
-        default: "IP CIDR for NAT GW Subnet in AZ2 (/28)"
+        default: "IP CIDR for NAT GW Subnet in AZ2"
       SecurityVPCGWLBESubnetCIDRAZ1:
-        default: "IP CIDR for GWLB Endpoint in AZ1 (/28)"
+        default: "IP CIDR for GWLB Endpoint in AZ1"
       SecurityVPCGWLBESubnetCIDRAZ2:
-        default: "IP CIDR for GWLB Endpoint in AZ2 (/28)"
+        default: "IP CIDR for GWLB Endpoint in AZ2"
       SecurityVPCTGWSubnetCIDRAZ1:
-        default: "IP CIDR for TGW Attachment in AZ1 (/28)"
+        default: "IP CIDR for TGW Attachment in AZ1"
       SecurityVPCTGWSubnetCIDRAZ2:
-        default: "IP CIDR for TGW Attachment in AZ2 (/28)"
+        default: "IP CIDR for TGW Attachment in AZ2"
       SecurityVPCVMSeriesDataSubnetCIDRAZ1:
-        default: "IP CIDR for VM-Series Data Plane Interface in AZ1 (/28)"
+        default: "IP CIDR for VM-Series Data Plane Interface in AZ1"
       SecurityVPCVMSeriesDataSubnetCIDRAZ2:
-        default: "IP CIDR for VM-Series Data Plane Interface in AZ2 (/28)"
+        default: "IP CIDR for VM-Series Data Plane Interface in AZ2"
       VMSeriesAMI:
         default: "AMI ID of VM-Series"
       VMSeriesInstanceType:
