@@ -157,7 +157,7 @@ Parameters:
 
   TGWID:
     Description: >-
-      Enter Transit Gateway ID to in the format tgw-0a1b2c3d4e5f6a7b8 or leave blank if you chose not to attach to a Transit Gateway
+      Enter Transit Gateway ID to in the format tgw-0a1b2c3d4e5f6a7b8 or leave blank if you chose not to attach to a Transit Gateway. You will need to ammend this attachment after connection to enable Appliance Mode.
     Type: String
     AllowedPattern: tgw-\w{1,30}|^$
     ConstraintDescription: Must be a valid TGW ID (e.g. tgw-0a983c84cfca39f4c) or left blank for No TGW Attachment
