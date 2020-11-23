@@ -15,4 +15,4 @@ dhcp-send-hostname=yes
 dhcp-send-client-id=yes
 dhcp-accept-server-hostname=yes
 dhcp-accept-server-domain=yes
-plugin-op-commands=aws-agw-inspect:enable
+plugin-op-commands=aws-gwlb-inspect:enable
