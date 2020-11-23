@@ -32,4 +32,17 @@ The following aspects of this template are optional:
 The easiest way to deploy this Cloud Formation Template (CFT) by using the AWS Console.
 
 **Notes:**
-- *The Gateway Load Balancer does not currently support Tagging of resources, if you include a Tag when deploying the Cloud Formation Template the deployment will fail.*
+
+**APPLIANCE MODE ON TGW ATTACHMENT**
+
+*You will need to enable Appliance Mode on the TGW Attachment after deployment manually using the CLI as this is not supported in CloudFormation today. 
+Use this command substituting the attachment ID and region for your values:*
+```
+aws ec2 modify-transit-gateway-vpc-attachment --options "ApplianceModeSupport=enable" --transit-gateway-attachment-id tgw-attach-000000 --region eu-west-1
+```
+
+**DO NOT TAG USING CLOUDFORMATION TAGS**
+
+*The Gateway Load Balancer does not currently support Tagging of resources, if you include a Tag when deploying the Cloud Formation Template the deployment will fail.*
+
+---
