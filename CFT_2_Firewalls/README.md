@@ -33,6 +33,10 @@ The easiest way to deploy this Cloud Formation Template (CFT) by using the AWS C
 
 **Notes:**
 
+**IF USING BOOTSTRAP.XML**
+
+ *If you are using an S3 Bucket to Bootstrap the firewalls with the provided `bootstrap.xml` file you can use the following usernane (`admin`) and password (`Pal0Alto!`) to login to the GUI Interface over HTTPS from your browser.*
+
 **APPLIANCE MODE ON TGW ATTACHMENT**
 
 *You will need to enable Appliance Mode on the TGW Attachment after deployment manually using the CLI as this is not supported in CloudFormation today. 
