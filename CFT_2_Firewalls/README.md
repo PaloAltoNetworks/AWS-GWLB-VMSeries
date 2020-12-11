@@ -16,7 +16,7 @@ The following items are required prior to deployment of this template:
 
   To obtain the AMI ID for the Bring Your Own License (BYOL) VM-Series in the "us-west-2" region you can run this command:
   ```
-  aws ec2 describe-images --filters "Name=name,Values=PA-VM-AWS-10.0.2*" "Name=product-code,Values=6njl1pau431dv1qxipg63mvah" --region us-west-2 --query "Images[*].{Name:Name,AMI:ImageId,State:State}" --output table
+  aws ec2 describe-images --filters "Name=name,Values=PA-VM-AWS-10.0*" "Name=product-code,Values=6njl1pau431dv1qxipg63mvah" --region us-west-2 --query "Images[*].{Name:Name,AMI:ImageId,State:State}" --output table
   ```
 
   To obtain the AMI ID for other Licenses such as Bundle 1, 2, or BYOL you can get change the `"Name=product-code,Values=6njl1pau431dv1qxipg63mvah"` section with the appropriate product code from [here](https://docs.paloaltonetworks.com/vm-series/10-0/vm-series-deployment/set-up-the-vm-series-firewall-on-aws/deploy-the-vm-series-firewall-on-aws/obtain-the-ami/get-amazon-machine-image-ids.html) (see step 2).
