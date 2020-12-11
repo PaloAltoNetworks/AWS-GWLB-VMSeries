@@ -57,15 +57,15 @@ aws cloudformation deploy --template-file SecurityVPC.yaml --stack-name Security
 
 *If you are using an S3 Bucket to Bootstrap the firewalls with the provided `bootstrap.xml` file you can use the following usernane (`admin`) and password (`Pal0Alto!`) to login to the GUI Interface over HTTPS from your browser.*
 
-#### APPLIANCE MODE ON TGW ATTACHMENT
+#### :exclamation: APPLIANCE MODE ON TGW ATTACHMENT
 
-:exclamation: *You will need to enable Appliance Mode on the TGW Attachment after deployment manually using the CLI as this is not supported in CloudFormation today. 
+*You will need to enable Appliance Mode on the TGW Attachment after deployment manually using the CLI as this is not supported in CloudFormation today. 
 Use this command substituting the attachment ID and region for your values:*
 ```
 aws ec2 modify-transit-gateway-vpc-attachment --options "ApplianceModeSupport=enable" --transit-gateway-attachment-id tgw-attach-000000 --region eu-west-1
 ```
 
 
-#### DO NOT TAG USING CLOUDFORMATION TAGS
+#### :exclamation: DO NOT TAG USING CLOUDFORMATION TAGS
 
-:exclamation: *The Gateway Load Balancer does not currently support Tagging of resources, if you include a Tag when deploying the Cloud Formation Template the deployment will fail.*
+*The Gateway Load Balancer does not currently support Tagging of resources, if you include a Tag when deploying the Cloud Formation Template the deployment will fail.*
