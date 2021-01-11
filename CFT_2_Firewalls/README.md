@@ -31,7 +31,7 @@ The following items are required prior to deployment of this template:
 - **Remote Management IP CIDR** - A IP CIDR to be allowed access to the Palo Alto Networks VM-Series Management interface. To open access to all networks us `0.0.0.0/0`
 
 The following aspects of this template are optional:
-- **Configuration** - You have 3 options for configuraton:
+- **Bootstrap Configuration** - You have 3 options for configuraton:
 
   1. You can provide a configuration file to allow them to start with this initial configuration and licensing applied. To deploy an existing configuration create an S3 Bucket with the appropriate files and folder stucture, more details can be found here: https://docs.paloaltonetworks.com/vm-series/10-0/vm-series-deployment/bootstrap-the-vm-series-firewall/bootstrap-the-vm-series-firewall-in-aws.html. You need to enter the S3 Bucket name in the "AWS S3 Bucket Name containing the VM-Series Bootstrap Information" field in the CFT Template. There is a sample configuration in the `bootstrap/config` folder.
 
@@ -66,6 +66,15 @@ aws cloudformation deploy --template-file SecurityVPC.yaml --stack-name Security
 
 *You will need to enable Appliance Mode on the TGW Attachment after deployment manually using the CLI as this is not supported in CloudFormation today. 
 Use this command substituting the attachment ID and region for your values:*
+
+You will need to ensure you AWS CLI is on version 2.1.15 or above, to check this rin the following command:
+
+```
+aws --version
+```
+
+Once confirmed you can then run this command to set appliance mode on the Transit Gateway (TGW) attachment:
+
 ```
 aws ec2 modify-transit-gateway-vpc-attachment --options "ApplianceModeSupport=enable" --transit-gateway-attachment-id tgw-attach-000000 --region eu-west-1
 ```
