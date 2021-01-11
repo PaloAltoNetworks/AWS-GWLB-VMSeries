@@ -37,7 +37,7 @@ The following aspects of this template are optional:
 
   2. You can manually configure the Palo Alto Networks VM-Series firewalls, by leaving the "AWS S3 Bucket Name containing the VM-Series Bootstrap Information" field in the template empty. This will do only the very basics of configuration and leave everything else to be configured.
 
-  3. Modify the `user_data` sections of the EC2 instances to allow for "Basic Bootstrap" configuration of the VM-Series. More details can be found here: https://docs.paloaltonetworks.com/vm-series/10-0/vm-series-deployment/bootstrap-the-vm-series-firewall/choose-a-bootstrap-method.html#idf6412176-e973-488e-9d7a-c568fe1e33a9_id3433e9c0-a589-40d5-b0bd-4bc42234aa0f
+  3. Modify the `user_data` sections of the EC2 instances in the supplied YAML CloudFormation template to allow for "Basic Bootstrap" configuration of the VM-Series. More details can be found here: https://docs.paloaltonetworks.com/vm-series/10-0/vm-series-deployment/bootstrap-the-vm-series-firewall/choose-a-bootstrap-method.html#idf6412176-e973-488e-9d7a-c568fe1e33a9_id3433e9c0-a589-40d5-b0bd-4bc42234aa0f
 
 - **Transit Gateway Attachment** - You can choose to attach this VPC to an existing Transit Gateway and configure the Routing Needed to connect back to your existing resources. If you chose not to do this you will need an additional configuration later, or you can re-run this template specifying the Transit Gateway ID. This configuration only creates a Transit Gateway Attachment, no other changes to the Transit Gateway are made. To use this attachment for **East/West**, or **Outbound** traffic flow security, you will need to adjust the Transit Gateway Routing.
 
