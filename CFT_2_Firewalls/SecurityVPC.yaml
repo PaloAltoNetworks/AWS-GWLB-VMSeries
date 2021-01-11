@@ -991,6 +991,7 @@ Resources:
               - dgname=
               - dns-primary=
               - dns-secondary=
+              - authcodes=
               - op-command-modes=jumbo-frame,mgmt-interface-swap
               - plugin-op-commands=aws-gwlb-inspect:enable
               - op-cmd-dpdk-pkt-io=on
@@ -1046,6 +1047,7 @@ Resources:
               - dgname=
               - dns-primary=
               - dns-secondary=
+              - authcodes=
               - op-command-modes=jumbo-frame, mgmt-interface-swap
               - plugin-op-commands=aws-gwlb-inspect:enable
               - op-cmd-dpdk-pkt-io=on
