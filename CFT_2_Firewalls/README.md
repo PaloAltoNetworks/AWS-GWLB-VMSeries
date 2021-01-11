@@ -31,8 +31,13 @@ The following items are required prior to deployment of this template:
 - **Remote Management IP CIDR** - A IP CIDR to be allowed access to the Palo Alto Networks VM-Series Management interface. To open access to all networks us `0.0.0.0/0`
 
 The following aspects of this template are optional:
-- **Configuration** - You can manually configure the Palo Alto Networks VM-Series firewalls, provide a configuration file to allow them to start with this initial configuration and licensing applied. To deploy an existing configuration create an S3 Bucket with the appropriate files and folder stucture, more details can be found here: https://docs.paloaltonetworks.com/vm-series/10-0/vm-series-deployment/bootstrap-the-vm-series-firewall/bootstrap-the-vm-series-firewall-in-aws.html
+- **Configuration** - You have 3 options for configuraton:
 
+1. You can provide a configuration file to allow them to start with this initial configuration and licensing applied. To deploy an existing configuration create an S3 Bucket with the appropriate files and folder stucture, more details can be found here: https://docs.paloaltonetworks.com/vm-series/10-0/vm-series-deployment/bootstrap-the-vm-series-firewall/bootstrap-the-vm-series-firewall-in-aws.html. You need to enter the S3 Bucket name in the "AWS S3 Bucket Name containing the VM-Series Bootstrap Information" field in the CFT Template. There is a sample configuration in the `bootstrap/config` folder.
+
+2. You can manually configure the Palo Alto Networks VM-Series firewalls, by leaving the "AWS S3 Bucket Name containing the VM-Series Bootstrap Information" field in the template empty. This will do only the very basics of configuration and leave everything else to be configured.
+
+3. Modify the `user_data` sections of the EC2 instances to allow for "Basic Bootstrap" configuration of the VM-Series. More details can be found here: https://docs.paloaltonetworks.com/vm-series/10-0/vm-series-deployment/bootstrap-the-vm-series-firewall/choose-a-bootstrap-method.html#idf6412176-e973-488e-9d7a-c568fe1e33a9_id3433e9c0-a589-40d5-b0bd-4bc42234aa0f
 
 - **Transit Gateway Attachment** - You can choose to attach this VPC to an exitsing Transit Gateway and configure the Routing Needed to connect back to your existing resources. If you chose not to do this you will need an additional configuration later, or you can re-run this template specifying the Transit Gateway ID. This configuration only creates a Transit Gateway Attachment, no other changes to the Transit Gateway are made. To use this attachment for **East/West**, or **Outbound** traffic flow security, you will need to adjust the Transit Gateway Routing.
 
