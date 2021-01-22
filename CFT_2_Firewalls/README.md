@@ -6,6 +6,8 @@
 
 This Cloud Formation Template (`SecurityVPC.yaml`) deploys the components needed to deploy Palo Alto Networks VM-Series Firewalls with the AWS Gateway Load Balancer in 2 Availability Zones (A & B).
 
+:exclamation: Check the [AWS Elastic Load Balancing FAQs - Gateway Load Balancer](https://aws.amazon.com/elasticloadbalancing/faqs/?nc=sn&loc=5#Gateway_Load_Balancer) for regional availability of the Gateway Load Balancer.
+
 #### Prerequisites
 
 The following items are required prior to deployment of this template:
