@@ -144,7 +144,6 @@ Parameters:
     Description: >-
       AMI reference in the format 'ami-00000000000' for PAN-OS v10.0.2 or above.
     Type: String
-    Default: ami-06cb3ae59e4c46288
     AllowedPattern: ami-\w{1,30}
     ConstraintDescription: Must be a valid AMI (e.g. ami-0a00a3780ec15f108)
 
@@ -992,6 +991,7 @@ Resources:
               - dgname=
               - dns-primary=
               - dns-secondary=
+              - authcodes=
               - op-command-modes=jumbo-frame,mgmt-interface-swap
               - plugin-op-commands=aws-gwlb-inspect:enable
               - op-cmd-dpdk-pkt-io=on
@@ -1047,6 +1047,7 @@ Resources:
               - dgname=
               - dns-primary=
               - dns-secondary=
+              - authcodes=
               - op-command-modes=jumbo-frame, mgmt-interface-swap
               - plugin-op-commands=aws-gwlb-inspect:enable
               - op-cmd-dpdk-pkt-io=on
