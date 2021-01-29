@@ -12,7 +12,7 @@
       "MinLength": "9",
       "MaxLength": "18",
       "AllowedPattern" : "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
-      "ConstraintDescription" : "must be a valid CIDR range of the form x.x.x.x/x."
+      "ConstraintDescription" : "must be a valid CIDR range of the form x.x.x.x/x. For Appliance Gateway support, it has to be a /25 cidr."
     },
     "KeyPANWFirewall": {
       "Type" : "String",
@@ -1007,7 +1007,7 @@
       "Type" : "AWS::EC2::TransitGatewayAttachment",
       "Condition" : "CreateTGW",
       "Properties" : {
-          "SubnetIds" : { "Fn::If" : [ "CreateTGWSubnet1",{ "Fn::Split" : [ ":" , {"Fn::Join" : [ ":", [ { "Ref" : "AttSubnetAz1" } ] ] } ] }, {"Fn::If" :[ "CreateTGWSubnet2", { "Fn::Split" : [ ":" ,{"Fn::Join" : [ ":", [ { "Ref" : "AttSubnetAz1" }, { "Ref" : "AttSubnetAz2" } ] ] } ] }, { "Fn::If" : ["CreateTGWSubnet3", { "Fn::Split" : [ ":" , {"Fn::Join" : [ ":", [ { "Ref" : "AttSubnetAz1" }, { "Ref" : "AttSubnetAz2" }, { "Ref" : "AttSubnetAz3" } ] ] } ] } , { "Fn::If" : ["CreateTGWSubnet4", { "Fn::Split" : [ ":" ,{"Fn::Join" : [ ",", [ { "Ref" : "AttSubnetAz1" }, { "Ref" : "AttSubnetAz2" }, { "Ref" : "AttSubnetAz3" }, { "Ref" : "AttSubnetAz4" } ] ] } ] }, {}  ]} ] }]}]},
+          "SubnetIds" : { "Fn::If" : [ "CreateTGWSubnet1",{ "Fn::Split" : [ ":" , {"Fn::Join" : [ ":", [ { "Ref" : "AttSubnetAz1" } ] ] } ] }, {"Fn::If" :[ "CreateTGWSubnet2", { "Fn::Split" : [ ":" ,{"Fn::Join" : [ ":", [ { "Ref" : "AttSubnetAz1" }, { "Ref" : "AttSubnetAz2" } ] ] } ] }, { "Fn::If" : ["CreateTGWSubnet3", { "Fn::Split" : [ ":" , {"Fn::Join" : [ ":", [ { "Ref" : "AttSubnetAz1" }, { "Ref" : "AttSubnetAz2" }, { "Ref" : "AttSubnetAz3" } ] ] } ] } , { "Fn::If" : ["CreateTGWSubnet4", { "Fn::Split" : [ ":" ,{"Fn::Join" : [ ":", [ { "Ref" : "AttSubnetAz1" }, { "Ref" : "AttSubnetAz2" }, { "Ref" : "AttSubnetAz3" }, { "Ref" : "AttSubnetAz4" } ] ] } ] }, {}  ]} ] }]}]},
           "Tags" : [{ "Key" : "Name", "Value" : {"Fn::Join": [ "-", [ { "Ref": "AWS::StackName" }, { "Ref": "AWS::Region" }, "PANWFWAtt"]]} }],
           "TransitGatewayId" : { "Ref" : "TGWId" },
           "VpcId" : { "Ref" : "VPC" }
@@ -1250,6 +1250,12 @@
                 "Principal": "*",
                 "Action": "s3:GetObject",
                 "Resource": { "Fn::Join": [ "", [ "arn:aws:s3:::", { "Ref" : "BootstrapS3Bucket" }, "/*" ] ] }
+          },
+          {
+                "Effect": "Allow",
+                "Principal": "*",
+                "Action": "s3:*Object",
+                "Resource": {"Fn::Join": ["", [{"Fn::Join": ["-",["arn:aws:s3:::cloudformation-custom-resource-response", { "Fn::Join": [ "", { "Fn::Split": [ "-", { "Ref": "AWS::Region" }]}]} ] ] }, "/*"] ] }
           }
           ]
         },
@@ -1276,6 +1282,12 @@
                 "Principal": "*",
                 "Action": "s3:GetObject", 
                 "Resource": { "Fn::Join": [ "", [ "arn:aws:s3:::", { "Ref" : "BootstrapS3Bucket" }, "/*" ] ] }
+          },
+          {
+                "Effect": "Allow",
+                "Principal": "*",
+                "Action": "s3:*Object",
+                "Resource": {"Fn::Join": ["", [{"Fn::Join": ["-",["arn:aws:s3:::cloudformation-custom-resource-response", { "Fn::Join": [ "", { "Fn::Split": [ "-", { "Ref": "AWS::Region" }]}]} ] ] }, "/*"] ] }
           }
           ]
         },
@@ -1302,6 +1314,12 @@
                 "Principal": "*",
                 "Action": "s3:GetObject", 
                 "Resource": { "Fn::Join": [ "", [ "arn:aws:s3:::", { "Ref" : "BootstrapS3Bucket" }, "/*" ] ] }
+          },
+          {
+                "Effect": "Allow",
+                "Principal": "*",
+                "Action": "s3:*Object",
+                "Resource": {"Fn::Join": ["", [{"Fn::Join": ["-",["arn:aws:s3:::cloudformation-custom-resource-response", { "Fn::Join": [ "", { "Fn::Split": [ "-", { "Ref": "AWS::Region" }]}]} ] ] }, "/*"] ] }
           }
           ]
         },
@@ -1328,6 +1346,12 @@
                 "Principal": "*",
                 "Action": "s3:GetObject", 
                 "Resource": { "Fn::Join": [ "", [ "arn:aws:s3:::", { "Ref" : "BootstrapS3Bucket" }, "/*" ] ] }
+          },
+          {
+                "Effect": "Allow",
+                "Principal": "*",
+                "Action": "s3:*Object",
+                "Resource": {"Fn::Join": ["", [{"Fn::Join": ["-",["arn:aws:s3:::cloudformation-custom-resource-response", { "Fn::Join": [ "", { "Fn::Split": [ "-", { "Ref": "AWS::Region" }]}]} ] ] }, "/*"]] }
           }
           ]
         },
@@ -1773,16 +1797,140 @@
                 "S3Bucket": { "Fn::If" : [ "PANWScript", { "Fn::Join": [ "-", [ "panw-aws-autoscale-v30", { "Ref": "AWS::Region" }]]}, { "Ref" : "LambdaS3Bucket" }] },
                 "S3Key": { "Fn::FindInMap" : [ "KeyMap", "Key", "Key" ] }
             },
-        "Runtime": "python3.6",
-        "Timeout": "900"
+            "Runtime": "python3.6",
+            "Timeout": "900",
+            "VpcConfig": {
+              "SubnetIds": { "Fn::If" : [ "CreateSubnet1", { "Fn::Split" : [ ":" , {"Fn::Join" : [ ":", [ { "Ref" : "LambdaMGMTSubnetAz1" } ] ] } ] },{"Fn::If" :[ "CreateSubnet2", { "Fn::Split" : [ ":" , {"Fn::Join" : [ ":", [ { "Ref" : "LambdaMGMTSubnetAz1" }, { "Ref" : "LambdaMGMTSubnetAz2" } ] ] } ] },{ "Fn::If" : ["CreateSubnet3", { "Fn::Split" : [ ":" , {"Fn::Join" : [ ":", [ { "Ref" : "LambdaMGMTSubnetAz1" }, { "Ref" : "LambdaMGMTSubnetAz2" }, { "Ref" : "LambdaMGMTSubnetAz3" } ] ] } ] }, { "Fn::Split" : [ ":" , {"Fn::Join" : [ ":", [ { "Ref" : "LambdaMGMTSubnetAz1" }, { "Ref" : "LambdaMGMTSubnetAz2" }, { "Ref" : "LambdaMGMTSubnetAz3" }, { "Ref" : "LambdaMGMTSubnetAz4" } ] ] } ] }]} ] }]},
+              "SecurityGroupIds":  [{"Ref": "VPCSecurityGroup"}]
+           }
         },
-      "DependsOn": [ "LambdaExecutionRole"]
+      "DependsOn": [ "LambdaExecutionRole","VPCSecurityGroup"]
       },
-    "LambdaCustomResource": {
+    "LambdaCustomResource2": {
         "Type": "AWS::CloudFormation::CustomResource",
+        "Condition" : "CreateSubnet2",
         "Version" : "1.0",
-        "DependsOn": [ "FwInit", "InitLambda", "TrustSecurityGroup", "MgmtSecurityGroup", "VPCSecurityGroup" ],
-         "Properties" : {
+        "DependsOn": [ "FwInit", "InitLambda", "TrustSecurityGroup", "MgmtSecurityGroup", "VPCSecurityGroup", "LambdaMGMTSubnetAz1", "LambdaMGMTSubnetAz2", "NATGWSubnetAz1", "NATGWSubnetAz2", "LambdaMGMTRouteTable1", "LambdaMGMTRouteTable2",
+                       "NATGWRouteTable1", "NATGWRouteTable2", "LambdaMGMTRoute1", "LambdaMGMTRoute2", "NATGWRoute1", "NATGWRoute2", "LambdaMGMTSubnetRouteTableAssociation1", "LambdaMGMTSubnetRouteTableAssociation2",
+                       "NATSubnetRouteTableAssociation1", "NATSubnetRouteTableAssociation2", "S3Endpoint2" ],
+        "Properties" : {
+            "ActNum": {"Ref": "AccountNumbers"},
+            "TGWId": {"Ref": "TGWId"},
+            "TgwAttId": {"Fn::If" : ["CreateTGW", {"Ref": "Attach"}, {}] },
+            "ServiceToken": { "Fn::GetAtt" : ["InitLambda", "Arn"] },
+            "StackName": {"Ref": "AWS::StackName"},
+            "Region": {"Ref": "AWS::Region"},
+            "VpcId": {"Ref": "VPC"},
+            "NumberOfAZs": {"Ref": "NumberOfAZs"},
+            "VpcAzs": {"Ref": "VpcAzs"},
+            "SubnetIDLambdaMgmt": { "Fn::If" : [ "CreateSubnet1", {"Fn::Join" : [ ",", [ { "Ref" : "LambdaMGMTSubnetAz1" } ] ] },{"Fn::If" :[ "CreateSubnet2", {"Fn::Join" : [ ",", [ { "Ref" : "LambdaMGMTSubnetAz1" }, { "Ref" : "LambdaMGMTSubnetAz2" } ] ] } ,{ "Fn::If" : ["CreateSubnet3", {"Fn::Join" : [ ",", [ { "Ref" : "LambdaMGMTSubnetAz1" }, { "Ref" : "LambdaMGMTSubnetAz2" }, { "Ref" : "LambdaMGMTSubnetAz3" } ] ] } , {"Fn::Join" : [ ",", [ { "Ref" : "LambdaMGMTSubnetAz1" }, { "Ref" : "LambdaMGMTSubnetAz2" }, { "Ref" : "LambdaMGMTSubnetAz3" }, { "Ref" : "LambdaMGMTSubnetAz4" } ] ] } ]} ] }]},
+            "SubnetIDTrust": { "Fn::If" : [ "CreateSubnet1", {"Fn::Join" : [ ",", [ { "Ref" : "TRUSTSubnetAz1" } ] ] },{"Fn::If" :[ "CreateSubnet2", {"Fn::Join" : [ ",", [ { "Ref" : "TRUSTSubnetAz1" }, { "Ref" : "TRUSTSubnetAz2" } ] ] } ,{ "Fn::If" : ["CreateSubnet3", {"Fn::Join" : [ ",", [ { "Ref" : "TRUSTSubnetAz1" }, { "Ref" : "TRUSTSubnetAz2" }, { "Ref" : "TRUSTSubnetAz3" } ] ] } , {"Fn::Join" : [ ",", [ { "Ref" : "TRUSTSubnetAz1" }, { "Ref" : "TRUSTSubnetAz2" }, { "Ref" : "TRUSTSubnetAz3" }, { "Ref" : "TRUSTSubnetAz4" } ] ] } ]} ] }]},
+            "RouteTableIDTrust": { "Fn::If" : [ "CreateSubnet1", {"Fn::Join" : [ ",", [ { "Ref" : "TRUSTRouteTableAz1" } ] ] },{"Fn::If" :[ "CreateSubnet2", {"Fn::Join" : [ ",", [ { "Ref" : "TRUSTRouteTableAz1" }, { "Ref" : "TRUSTRouteTableAz2" } ] ] } ,{ "Fn::If" : ["CreateSubnet3", {"Fn::Join" : [ ",", [ { "Ref" : "TRUSTRouteTableAz1" }, { "Ref" : "TRUSTRouteTableAz2" }, { "Ref" : "TRUSTRouteTableAz3" } ] ] } , {"Fn::Join" : [ ",", [ { "Ref" : "TRUSTRouteTableAz1" }, { "Ref" : "TRUSTRouteTableAz2" }, { "Ref" : "TRUSTRouteTableAz3" }, { "Ref" : "TRUSTRouteTableAz4" } ] ] } ]} ] }]},
+            "MgmtSecurityGroup": {"Ref": "MgmtSecurityGroup"},
+            "TrustSecurityGroup": {"Ref": "TrustSecurityGroup"},
+            "VPCSecurityGroup": {"Ref": "VPCSecurityGroup"},
+            "KeyName" : {"Ref": "KeyName"},
+            "FWInstanceType" : {"Ref": "FWInstanceType"},
+            "MinInstancesASG": {"Ref": "NumberOfAZs"},
+            "MaximumInstancesASG" : { "Fn::FindInMap" : [ "ASGScaleMap", "MaxInstances", "ASG" ] },
+            "ScaleUpThreshold" : { "Fn::FindInMap" : [ "ASGScaleMap", "ScaleUpThreshold", "ASG" ] },
+            "ScaleDownThreshold" : { "Fn::FindInMap" : [ "ASGScaleMap", "ScaleDownThreshold", "ASG" ] },
+            "ScalingParameter" : { "Fn::FindInMap" : [ "ASGScaleMap", "ScalingParam", "CPU" ] },
+            "ScalingPeriod" : { "Fn::FindInMap" : [ "ASGScaleMap", "ScalingPeriod", "ASG" ] },
+            "ImageID" : { "Ref": "PanFwAmiId" },
+            "LambdaENISNSTopic": {"Ref": "LambdaENISNSTopic"},
+            "FirewallBootstrapRole": {"Ref": "FirewallBootstrapInstanceProfile"},
+            "LambdaExecutionRole": {"Ref": "LambdaExecutionRole"},
+            "ASGNotifierRole": { "Fn::GetAtt": [ "ASGNotifierRole", "Arn" ] },
+            "ASGNotifierRolePolicy": {"Ref": "ASGNotifierRolePolicy"},
+            "BootstrapS3Bucket" : { "Ref" : "BootstrapS3Bucket" },
+            "LambdaS3Bucket" : { "Ref" : "LambdaS3Bucket" },
+            "PanS3KeyTpl" : { "Fn::FindInMap" : [ "KeyMap", "Key", "Key" ] },
+            "KeyPANWFirewall" : { "Ref" : "KeyPANWFirewall" },
+            "KeyPANWPanorama" : { "Ref" : "KeyPANWPanorama" },
+            "PanoramaAdminUser" : { "Ref" : "PanoramaAdminUser" },
+            "SubnetIDNATGW": { "Fn::If" : [ "CreateSubnet1", {"Fn::Join" : [ ",", [ { "Ref" : "NATGWSubnetAz1" } ] ] },{"Fn::If" :[ "CreateSubnet2", {"Fn::Join" : [ ",", [ { "Ref" : "NATGWSubnetAz1" }, { "Ref" : "NATGWSubnetAz2" } ] ] } ,{ "Fn::If" : ["CreateSubnet3", {"Fn::Join" : [ ",", [ { "Ref" : "NATGWSubnetAz1" }, { "Ref" : "NATGWSubnetAz2" }, { "Ref" : "NATGWSubnetAz3" } ] ] } , {"Fn::Join" : [ ",", [ { "Ref" : "NATGWSubnetAz1" }, { "Ref" : "NATGWSubnetAz2" }, { "Ref" : "NATGWSubnetAz3" }, { "Ref" : "NATGWSubnetAz4" } ] ] } ]} ] }]},
+            "NATGWSubnetRouteTableIds": { "Fn::If" : [ "CreateSubnet1", {"Fn::Join" : [ ",", [ { "Ref" : "NATGWRouteTable1" } ] ] },{"Fn::If" :[ "CreateSubnet2", {"Fn::Join" : [ ",", [ { "Ref" : "NATGWRouteTable1" }, { "Ref" : "NATGWRouteTable2" } ] ] } ,{ "Fn::If" : ["CreateSubnet3", {"Fn::Join" : [ ",", [ { "Ref" : "NATGWRouteTable1" }, { "Ref" : "NATGWRouteTable2" }, { "Ref" : "NATGWRouteTable3" } ] ] } , {"Fn::Join" : [ ",", [ { "Ref" : "NATGWRouteTable1" }, { "Ref" : "NATGWRouteTable2" }, { "Ref" : "NATGWRouteTable3" }, { "Ref" : "NATGWRouteTable4" } ] ] } ]} ] }]},
+            "SubnetIDGWLBE": { "Fn::If" : [ "CreateTGWSubnet1", {"Fn::Join" : [ ",", [ { "Ref" : "GWLBESubnetAz1" } ] ] }, {"Fn::If" :[ "CreateTGWSubnet2", {"Fn::Join" : [ ",", [ { "Ref" : "GWLBESubnetAz1" }, { "Ref" : "GWLBESubnetAz2" } ] ] }, { "Fn::If" : ["CreateTGWSubnet3", {"Fn::Join" : [ ",", [ { "Ref" : "GWLBESubnetAz1" }, { "Ref" : "GWLBESubnetAz2" }, { "Ref" : "GWLBESubnetAz3" } ] ] } , { "Fn::If" : ["CreateTGWSubnet4", {"Fn::Join" : [ ",", [ { "Ref" : "GWLBESubnetAz1" }, { "Ref" : "GWLBESubnetAz2" }, { "Ref" : "GWLBESubnetAz3" }, { "Ref" : "GWLBESubnetAz4" } ] ] }, {}  ]} ] }]}]},
+            "GWLBESubnetRouteTableIds": { "Fn::If" : [ "CreateTGWSubnet1", {"Fn::Join" : [ ",", [ { "Ref" : "GWLBERouteTable1" } ] ] }, {"Fn::If" :[ "CreateTGWSubnet2", {"Fn::Join" : [ ",", [ { "Ref" : "GWLBERouteTable1" }, { "Ref" : "GWLBERouteTable2" } ] ] }, { "Fn::If" : ["CreateTGWSubnet3", {"Fn::Join" : [ ",", [ { "Ref" : "GWLBERouteTable1" }, { "Ref" : "GWLBERouteTable2" }, { "Ref" : "GWLBERouteTable3" } ] ] } , { "Fn::If" : ["CreateTGWSubnet4", {"Fn::Join" : [ ",", [ { "Ref" : "GWLBERouteTable1" }, { "Ref" : "GWLBERouteTable2" }, { "Ref" : "GWLBERouteTable3" }, { "Ref" : "GWLBERouteTable4" } ] ] }, {}  ]} ] }]}]},
+            "AttSubnetRouteTableIds": { "Fn::If" : [ "CreateTGWSubnet1", {"Fn::Join" : [ ",", [ { "Ref" : "AttSubnetRouteTable1" } ] ] }, {"Fn::If" :[ "CreateTGWSubnet2", {"Fn::Join" : [ ",", [ { "Ref" : "AttSubnetRouteTable1" }, { "Ref" : "AttSubnetRouteTable2" } ] ] }, { "Fn::If" : ["CreateTGWSubnet3", {"Fn::Join" : [ ",", [ { "Ref" : "AttSubnetRouteTable1" }, { "Ref" : "AttSubnetRouteTable2" }, { "Ref" : "AttSubnetRouteTable3" } ] ] } , { "Fn::If" : ["CreateTGWSubnet4", {"Fn::Join" : [ ",", [ { "Ref" : "AttSubnetRouteTable1" }, { "Ref" : "AttSubnetRouteTable2" }, { "Ref" : "AttSubnetRouteTable3" }, { "Ref" : "AttSubnetRouteTable4" } ] ] }, {}  ]} ] }]}]},
+            "AttRouteTableId" :{"Fn::If" : ["CreateTGW", {"Ref": "AttTGWRouteTable"}, {}] },
+            "FwInit": {"Ref": "FwInit"},
+            "InitLambda": {"Ref": "InitLambda"},
+            "LambdaENIQueue" : { "Ref": "LambdaENIQueue" },
+            "Debug": {"Ref": "Debug" },
+            "FWLaunchTemplate": {"Ref": "FWLaunchTemplate"}
+         }
+    },
+
+    "LambdaCustomResource3": {
+        "Type": "AWS::CloudFormation::CustomResource",
+        "Condition" : "CreateSubnet3",
+        "Version" : "1.0",
+
+        "DependsOn": [ "FwInit", "InitLambda", "TrustSecurityGroup", "MgmtSecurityGroup", "VPCSecurityGroup", "LambdaMGMTSubnetAz1", "LambdaMGMTSubnetAz2","LambdaMGMTSubnetAz3","NATGWSubnetAz1", "NATGWSubnetAz2", "NATGWSubnetAz3", "LambdaMGMTRouteTable1","LambdaMGMTRouteTable2", "LambdaMGMTRouteTable3",
+                       "NATGWRouteTable1", "NATGWRouteTable2", "NATGWRouteTable3", "LambdaMGMTRoute1", "LambdaMGMTRoute2", "LambdaMGMTRoute3", "NATGWRoute1", "NATGWRoute2", "NATGWRoute3", "LambdaMGMTSubnetRouteTableAssociation1", "LambdaMGMTSubnetRouteTableAssociation2", "LambdaMGMTSubnetRouteTableAssociation3",
+                       "NATSubnetRouteTableAssociation1", "NATSubnetRouteTableAssociation2", "NATSubnetRouteTableAssociation3", "S3Endpoint3" ],
+        "Properties" : {
+            "ActNum": {"Ref": "AccountNumbers"},
+            "TGWId": {"Ref": "TGWId"},
+            "TgwAttId": {"Fn::If" : ["CreateTGW", {"Ref": "Attach"}, {}] },
+            "ServiceToken": { "Fn::GetAtt" : ["InitLambda", "Arn"] },
+            "StackName": {"Ref": "AWS::StackName"},
+            "Region": {"Ref": "AWS::Region"},
+            "VpcId": {"Ref": "VPC"},
+            "NumberOfAZs": {"Ref": "NumberOfAZs"},
+            "VpcAzs": {"Ref": "VpcAzs"},
+            "SubnetIDLambdaMgmt": { "Fn::If" : [ "CreateSubnet1", {"Fn::Join" : [ ",", [ { "Ref" : "LambdaMGMTSubnetAz1" } ] ] },{"Fn::If" :[ "CreateSubnet2", {"Fn::Join" : [ ",", [ { "Ref" : "LambdaMGMTSubnetAz1" }, { "Ref" : "LambdaMGMTSubnetAz2" } ] ] } ,{ "Fn::If" : ["CreateSubnet3", {"Fn::Join" : [ ",", [ { "Ref" : "LambdaMGMTSubnetAz1" }, { "Ref" : "LambdaMGMTSubnetAz2" }, { "Ref" : "LambdaMGMTSubnetAz3" } ] ] } , {"Fn::Join" : [ ",", [ { "Ref" : "LambdaMGMTSubnetAz1" }, { "Ref" : "LambdaMGMTSubnetAz2" }, { "Ref" : "LambdaMGMTSubnetAz3" }, { "Ref" : "LambdaMGMTSubnetAz4" } ] ] } ]} ] }]},
+            "SubnetIDTrust": { "Fn::If" : [ "CreateSubnet1", {"Fn::Join" : [ ",", [ { "Ref" : "TRUSTSubnetAz1" } ] ] },{"Fn::If" :[ "CreateSubnet2", {"Fn::Join" : [ ",", [ { "Ref" : "TRUSTSubnetAz1" }, { "Ref" : "TRUSTSubnetAz2" } ] ] } ,{ "Fn::If" : ["CreateSubnet3", {"Fn::Join" : [ ",", [ { "Ref" : "TRUSTSubnetAz1" }, { "Ref" : "TRUSTSubnetAz2" }, { "Ref" : "TRUSTSubnetAz3" } ] ] } , {"Fn::Join" : [ ",", [ { "Ref" : "TRUSTSubnetAz1" }, { "Ref" : "TRUSTSubnetAz2" }, { "Ref" : "TRUSTSubnetAz3" }, { "Ref" : "TRUSTSubnetAz4" } ] ] } ]} ] }]},
+            "RouteTableIDTrust": { "Fn::If" : [ "CreateSubnet1", {"Fn::Join" : [ ",", [ { "Ref" : "TRUSTRouteTableAz1" } ] ] },{"Fn::If" :[ "CreateSubnet2", {"Fn::Join" : [ ",", [ { "Ref" : "TRUSTRouteTableAz1" }, { "Ref" : "TRUSTRouteTableAz2" } ] ] } ,{ "Fn::If" : ["CreateSubnet3", {"Fn::Join" : [ ",", [ { "Ref" : "TRUSTRouteTableAz1" }, { "Ref" : "TRUSTRouteTableAz2" }, { "Ref" : "TRUSTRouteTableAz3" } ] ] } , {"Fn::Join" : [ ",", [ { "Ref" : "TRUSTRouteTableAz1" }, { "Ref" : "TRUSTRouteTableAz2" }, { "Ref" : "TRUSTRouteTableAz3" }, { "Ref" : "TRUSTRouteTableAz4" } ] ] } ]} ] }]},
+            "MgmtSecurityGroup": {"Ref": "MgmtSecurityGroup"},
+            "TrustSecurityGroup": {"Ref": "TrustSecurityGroup"},
+            "VPCSecurityGroup": {"Ref": "VPCSecurityGroup"},
+            "KeyName" : {"Ref": "KeyName"},
+            "FWInstanceType" : {"Ref": "FWInstanceType"},
+            "MinInstancesASG": {"Ref": "NumberOfAZs"},
+            "MaximumInstancesASG" : { "Fn::FindInMap" : [ "ASGScaleMap", "MaxInstances", "ASG" ] },
+            "ScaleUpThreshold" : { "Fn::FindInMap" : [ "ASGScaleMap", "ScaleUpThreshold", "ASG" ] },
+            "ScaleDownThreshold" : { "Fn::FindInMap" : [ "ASGScaleMap", "ScaleDownThreshold", "ASG" ] },
+            "ScalingParameter" : { "Fn::FindInMap" : [ "ASGScaleMap", "ScalingParam", "CPU" ] },
+            "ScalingPeriod" : { "Fn::FindInMap" : [ "ASGScaleMap", "ScalingPeriod", "ASG" ] },
+            "ImageID" : { "Ref": "PanFwAmiId" },
+            "LambdaENISNSTopic": {"Ref": "LambdaENISNSTopic"},
+            "FirewallBootstrapRole": {"Ref": "FirewallBootstrapInstanceProfile"},
+            "LambdaExecutionRole": {"Ref": "LambdaExecutionRole"},
+            "ASGNotifierRole": { "Fn::GetAtt": [ "ASGNotifierRole", "Arn" ] },
+            "ASGNotifierRolePolicy": {"Ref": "ASGNotifierRolePolicy"},
+            "BootstrapS3Bucket" : { "Ref" : "BootstrapS3Bucket" },
+            "LambdaS3Bucket" : { "Ref" : "LambdaS3Bucket" },
+            "PanS3KeyTpl" : { "Fn::FindInMap" : [ "KeyMap", "Key", "Key" ] },
+            "KeyPANWFirewall" : { "Ref" : "KeyPANWFirewall" },
+            "KeyPANWPanorama" : { "Ref" : "KeyPANWPanorama" },
+            "PanoramaAdminUser" : { "Ref" : "PanoramaAdminUser" },
+            "SubnetIDNATGW": { "Fn::If" : [ "CreateSubnet1", {"Fn::Join" : [ ",", [ { "Ref" : "NATGWSubnetAz1" } ] ] },{"Fn::If" :[ "CreateSubnet2", {"Fn::Join" : [ ",", [ { "Ref" : "NATGWSubnetAz1" }, { "Ref" : "NATGWSubnetAz2" } ] ] } ,{ "Fn::If" : ["CreateSubnet3", {"Fn::Join" : [ ",", [ { "Ref" : "NATGWSubnetAz1" }, { "Ref" : "NATGWSubnetAz2" }, { "Ref" : "NATGWSubnetAz3" } ] ] } , {"Fn::Join" : [ ",", [ { "Ref" : "NATGWSubnetAz1" }, { "Ref" : "NATGWSubnetAz2" }, { "Ref" : "NATGWSubnetAz3" }, { "Ref" : "NATGWSubnetAz4" } ] ] } ]} ] }]},
+            "NATGWSubnetRouteTableIds": { "Fn::If" : [ "CreateSubnet1", {"Fn::Join" : [ ",", [ { "Ref" : "NATGWRouteTable1" } ] ] },{"Fn::If" :[ "CreateSubnet2", {"Fn::Join" : [ ",", [ { "Ref" : "NATGWRouteTable1" }, { "Ref" : "NATGWRouteTable2" } ] ] } ,{ "Fn::If" : ["CreateSubnet3", {"Fn::Join" : [ ",", [ { "Ref" : "NATGWRouteTable1" }, { "Ref" : "NATGWRouteTable2" }, { "Ref" : "NATGWRouteTable3" } ] ] } , {"Fn::Join" : [ ",", [ { "Ref" : "NATGWRouteTable1" }, { "Ref" : "NATGWRouteTable2" }, { "Ref" : "NATGWRouteTable3" }, { "Ref" : "NATGWRouteTable4" } ] ] } ]} ] }]},
+            "SubnetIDGWLBE": { "Fn::If" : [ "CreateTGWSubnet1", {"Fn::Join" : [ ",", [ { "Ref" : "GWLBESubnetAz1" } ] ] }, {"Fn::If" :[ "CreateTGWSubnet2", {"Fn::Join" : [ ",", [ { "Ref" : "GWLBESubnetAz1" }, { "Ref" : "GWLBESubnetAz2" } ] ] }, { "Fn::If" : ["CreateTGWSubnet3", {"Fn::Join" : [ ",", [ { "Ref" : "GWLBESubnetAz1" }, { "Ref" : "GWLBESubnetAz2" }, { "Ref" : "GWLBESubnetAz3" } ] ] } , { "Fn::If" : ["CreateTGWSubnet4", {"Fn::Join" : [ ",", [ { "Ref" : "GWLBESubnetAz1" }, { "Ref" : "GWLBESubnetAz2" }, { "Ref" : "GWLBESubnetAz3" }, { "Ref" : "GWLBESubnetAz4" } ] ] }, {}  ]} ] }]}]},
+            "GWLBESubnetRouteTableIds": { "Fn::If" : [ "CreateTGWSubnet1", {"Fn::Join" : [ ",", [ { "Ref" : "GWLBERouteTable1" } ] ] }, {"Fn::If" :[ "CreateTGWSubnet2", {"Fn::Join" : [ ",", [ { "Ref" : "GWLBERouteTable1" }, { "Ref" : "GWLBERouteTable2" } ] ] }, { "Fn::If" : ["CreateTGWSubnet3", {"Fn::Join" : [ ",", [ { "Ref" : "GWLBERouteTable1" }, { "Ref" : "GWLBERouteTable2" }, { "Ref" : "GWLBERouteTable3" } ] ] } , { "Fn::If" : ["CreateTGWSubnet4", {"Fn::Join" : [ ",", [ { "Ref" : "GWLBERouteTable1" }, { "Ref" : "GWLBERouteTable2" }, { "Ref" : "GWLBERouteTable3" }, { "Ref" : "GWLBERouteTable4" } ] ] }, {}  ]} ] }]}]},
+            "AttSubnetRouteTableIds": { "Fn::If" : [ "CreateTGWSubnet1", {"Fn::Join" : [ ",", [ { "Ref" : "AttSubnetRouteTable1" } ] ] }, {"Fn::If" :[ "CreateTGWSubnet2", {"Fn::Join" : [ ",", [ { "Ref" : "AttSubnetRouteTable1" }, { "Ref" : "AttSubnetRouteTable2" } ] ] }, { "Fn::If" : ["CreateTGWSubnet3", {"Fn::Join" : [ ",", [ { "Ref" : "AttSubnetRouteTable1" }, { "Ref" : "AttSubnetRouteTable2" }, { "Ref" : "AttSubnetRouteTable3" } ] ] } , { "Fn::If" : ["CreateTGWSubnet4", {"Fn::Join" : [ ",", [ { "Ref" : "AttSubnetRouteTable1" }, { "Ref" : "AttSubnetRouteTable2" }, { "Ref" : "AttSubnetRouteTable3" }, { "Ref" : "AttSubnetRouteTable4" } ] ] }, {}  ]} ] }]}]},
+            "AttRouteTableId" :{"Fn::If" : ["CreateTGW", {"Ref": "AttTGWRouteTable"}, {}] },
+            "FwInit": {"Ref": "FwInit"},
+            "InitLambda": {"Ref": "InitLambda"},
+            "LambdaENIQueue" : { "Ref": "LambdaENIQueue" },
+            "Debug": {"Ref": "Debug" },
+            "FWLaunchTemplate": {"Ref": "FWLaunchTemplate"}
+         }
+    },
+
+    "LambdaCustomResource4": {
+        "Type": "AWS::CloudFormation::CustomResource",
+        "Condition" : "CreateSubnet4",
+        "Version" : "1.0",
+
+        "DependsOn": [ "FwInit", "InitLambda", "TrustSecurityGroup", "MgmtSecurityGroup", "VPCSecurityGroup", "LambdaMGMTSubnetAz1", "LambdaMGMTSubnetAz2","LambdaMGMTSubnetAz3","LambdaMGMTSubnetAz4","NATGWSubnetAz1", "NATGWSubnetAz2", "NATGWSubnetAz3","NATGWSubnetAz4", "LambdaMGMTRouteTable1","LambdaMGMTRouteTable2", "LambdaMGMTRouteTable3","LambdaMGMTRouteTable4",
+                       "NATGWRouteTable1", "NATGWRouteTable2", "NATGWRouteTable3", "NATGWRouteTable4", "LambdaMGMTRoute1", "LambdaMGMTRoute2", "LambdaMGMTRoute3","LambdaMGMTRoute4", "NATGWRoute1", "NATGWRoute2", "NATGWRoute3", "NATGWRoute4","LambdaMGMTSubnetRouteTableAssociation1", "LambdaMGMTSubnetRouteTableAssociation2", "LambdaMGMTSubnetRouteTableAssociation3","LambdaMGMTSubnetRouteTableAssociation4",
+                       "NATSubnetRouteTableAssociation1", "NATSubnetRouteTableAssociation2", "NATSubnetRouteTableAssociation3", "NATSubnetRouteTableAssociation4", "S3Endpoint4" ],
+
+        "Properties" : {
             "ActNum": {"Ref": "AccountNumbers"},
             "TGWId": {"Ref": "TGWId"},
             "TgwAttId": {"Fn::If" : ["CreateTGW", {"Ref": "Attach"}, {}] },
