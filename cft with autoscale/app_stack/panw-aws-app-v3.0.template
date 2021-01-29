@@ -670,12 +670,14 @@
       }
     },
 
+
+
     "ApplicationLoadBalancer" : {
       "Type" : "AWS::ElasticLoadBalancingV2::LoadBalancer",
       "Properties" : {
         "Name" : {"Fn::Join" : ["-", [{"Ref":"AWS::StackName"}, "ALB" ]] },
         "Type" : "application",
-        "Subnets" : { "Fn::If" : [ "CreateSubnet1",{ "Fn::Split" : [ ":" , {"Fn::Join" : [ ":", [ { "Ref" : "ALBSubnet1" } ] ] } ] }, {"Fn::If" :[ "CreateSubnet2", { "Fn::Split" : [ ":" ,{"Fn::Join" : [ ":", [ { "Ref" : "ALBSubnet1" }, { "Ref" : "ALBSubnet2" } ] ] } ] }, { "Fn::If" : ["CreateSubnet3", { "Fn::Split" : [ ":" , {"Fn::Join" : [ ":", [ { "Ref" : "ALBSubnet1" }, { "Ref" : "ALBSubnet2" }, { "Ref" : "ALBSubnet3" } ] ] } ] } , { "Fn::If" : ["CreateSubnet4", { "Fn::Split" : [ ":" ,{"Fn::Join" : [ ",", [ { "Ref" : "ALBSubnet1" }, { "Ref" : "ALBSubnet2" }, { "Ref" : "ALBSubnet3" }, { "Ref" : "ALBSubnet4" } ] ] } ] }, {}  ]} ] }]}]},
+        "Subnets" : { "Fn::If" : [ "CreateSubnet1",[ { "Ref" : "ALBSubnet1" } ], {"Fn::If" :[ "CreateSubnet2", [ { "Ref" : "ALBSubnet1" }, { "Ref" : "ALBSubnet2" } ], { "Fn::If" : ["CreateSubnet3", [ { "Ref" : "ALBSubnet1" }, { "Ref" : "ALBSubnet2" }, { "Ref" : "ALBSubnet3" } ],[ { "Ref" : "ALBSubnet1" }, { "Ref" : "ALBSubnet2" }, { "Ref" : "ALBSubnet3" }, { "Ref" : "ALBSubnet4" } ]] } ] }]},
         "Scheme" : "internet-facing",
         "SecurityGroups" : [{ "Ref" : "ALBSecurityGroup" }]
       }
@@ -928,7 +930,8 @@
     "Attach" : {
       "Type" : "AWS::EC2::TransitGatewayAttachment",
       "Properties" : {
-          "SubnetIds" : { "Fn::If" : [ "CreateSubnet1",{ "Fn::Split" : [ ":" , {"Fn::Join" : [ ":", [ { "Ref" : "AppSubnet1" } ] ] } ] }, {"Fn::If" :[ "CreateSubnet2", { "Fn::Split" : [ ":" ,{"Fn::Join" : [ ":", [ { "Ref" : "AppSubnet1" }, { "Ref" : "AppSubnet2" } ] ] } ] }, { "Fn::If" : ["CreateSubnet3", { "Fn::Split" : [ ":" , {"Fn::Join" : [ ":", [ { "Ref" : "AppSubnet1" }, { "Ref" : "AppSubnet2" }, { "Ref" : "AppSubnet3" } ] ] } ] } , { "Fn::If" : ["CreateSubnet4", { "Fn::Split" : [ ":" ,{"Fn::Join" : [ ",", [ { "Ref" : "AppSubnet1" }, { "Ref" : "AppSubnet2" }, { "Ref" : "AppSubnet3" }, { "Ref" : "AppSubnet4" } ] ] } ] }, {}  ]} ] }]}]},
+
+          "SubnetIds" : { "Fn::If" : [ "CreateSubnet1",[ { "Ref" : "ALBSubnet1" } ], {"Fn::If" :[ "CreateSubnet2", [ { "Ref" : "ALBSubnet1" }, { "Ref" : "ALBSubnet2" } ], { "Fn::If" : ["CreateSubnet3", [ { "Ref" : "ALBSubnet1" }, { "Ref" : "ALBSubnet2" }, { "Ref" : "ALBSubnet3" } ],[ { "Ref" : "ALBSubnet1" }, { "Ref" : "ALBSubnet2" }, { "Ref" : "ALBSubnet3" }, { "Ref" : "ALBSubnet4" } ]] } ] }]},
           "Tags" : [{ "Key" : "Name", "Value" : {"Fn::Join": [ "-", [ { "Ref": "AWS::StackName" }, { "Ref": "AWS::Region" }, "PANWAppAtt"]]} }],
           "TransitGatewayId" : { "Ref" : "TGWId" },
           "VpcId" : { "Ref" : "VPC" }
@@ -1065,6 +1068,12 @@
                 }
         ]
       }
+    }
+  },
+  "Outputs" : {
+    "ALBDNSName": {
+      "Value": { "Fn::GetAtt" : ["ApplicationLoadBalancer", "DNSName"]},
+      "Description": "DNS Name of the application load balancer"
     }
   }
 }
