@@ -27,9 +27,9 @@ resource "aws_internet_gateway" "sec_vpc_igw" {
 }
 
 resource "aws_subnet" "sec_mgmt_subnet" {
-  count = length(var.availability_zones)
+  count             = length(var.availability_zones)
   vpc_id            = aws_vpc.sec_vpc.id
-  cidr_block        = cidrsubnet(join("/",[split("/", aws_vpc.sec_vpc.cidr_block)[0], "23"]), 5, 0+count.index)
+  cidr_block        = cidrsubnet(join("/", [split("/", aws_vpc.sec_vpc.cidr_block)[0], "23"]), 5, 0 + count.index)
   availability_zone = var.availability_zones[count.index]
   tags = {
     Name = "sec-mgmt-subnet-${var.availability_zones[count.index]}-${random_id.deployment_id.hex}"
@@ -38,9 +38,9 @@ resource "aws_subnet" "sec_mgmt_subnet" {
 }
 
 resource "aws_subnet" "sec_data_subnet" {
-  count = length(var.availability_zones)
+  count             = length(var.availability_zones)
   vpc_id            = aws_vpc.sec_vpc.id
-  cidr_block        = cidrsubnet(join("/",[split("/", aws_vpc.sec_vpc.cidr_block)[0], "23"]), 5, 5+count.index)
+  cidr_block        = cidrsubnet(join("/", [split("/", aws_vpc.sec_vpc.cidr_block)[0], "23"]), 5, 5 + count.index)
   availability_zone = var.availability_zones[count.index]
   tags = {
     Name = "sec-data-subnet-${var.availability_zones[count.index]}-${random_id.deployment_id.hex}"
@@ -49,9 +49,9 @@ resource "aws_subnet" "sec_data_subnet" {
 }
 
 resource "aws_subnet" "sec_agwe_subnet" {
-  count = length(var.availability_zones)
+  count             = length(var.availability_zones)
   vpc_id            = aws_vpc.sec_vpc.id
-  cidr_block        = cidrsubnet(join("/",[split("/", aws_vpc.sec_vpc.cidr_block)[0], "23"]), 5, 10+count.index)
+  cidr_block        = cidrsubnet(join("/", [split("/", aws_vpc.sec_vpc.cidr_block)[0], "23"]), 5, 10 + count.index)
   availability_zone = var.availability_zones[count.index]
   tags = {
     Name = "sec-gwlbe-ob-subnet-${var.availability_zones[count.index]}-${random_id.deployment_id.hex}"
@@ -60,9 +60,9 @@ resource "aws_subnet" "sec_agwe_subnet" {
 }
 
 resource "aws_subnet" "sec_agwe_ew_subnet" {
-  count = length(var.availability_zones)
+  count             = length(var.availability_zones)
   vpc_id            = aws_vpc.sec_vpc.id
-  cidr_block        = cidrsubnet(join("/",[split("/", aws_vpc.sec_vpc.cidr_block)[0], "23"]), 5, 15+count.index)
+  cidr_block        = cidrsubnet(join("/", [split("/", aws_vpc.sec_vpc.cidr_block)[0], "23"]), 5, 15 + count.index)
   availability_zone = var.availability_zones[count.index]
   tags = {
     Name = "sec-gwlbe-ew-subnet-${var.availability_zones[count.index]}-${random_id.deployment_id.hex}"
@@ -71,9 +71,9 @@ resource "aws_subnet" "sec_agwe_ew_subnet" {
 }
 
 resource "aws_subnet" "sec_tgwa_subnet" {
-  count = length(var.availability_zones)
+  count             = length(var.availability_zones)
   vpc_id            = aws_vpc.sec_vpc.id
-  cidr_block        = cidrsubnet(join("/",[split("/", aws_vpc.sec_vpc.cidr_block)[0], "23"]), 5, 20+count.index)
+  cidr_block        = cidrsubnet(join("/", [split("/", aws_vpc.sec_vpc.cidr_block)[0], "23"]), 5, 20 + count.index)
   availability_zone = var.availability_zones[count.index]
   tags = {
     Name = "sec-tgwa-subnet-${var.availability_zones[count.index]}-${random_id.deployment_id.hex}"
@@ -82,9 +82,9 @@ resource "aws_subnet" "sec_tgwa_subnet" {
 }
 
 resource "aws_subnet" "sec_natgw_subnet" {
-  count = length(var.availability_zones)
+  count             = length(var.availability_zones)
   vpc_id            = aws_vpc.sec_vpc.id
-  cidr_block        = cidrsubnet(join("/",[split("/", aws_vpc.sec_vpc.cidr_block)[0], "23"]), 5, 25+count.index)
+  cidr_block        = cidrsubnet(join("/", [split("/", aws_vpc.sec_vpc.cidr_block)[0], "23"]), 5, 25 + count.index)
   availability_zone = var.availability_zones[count.index]
   tags = {
     Name = "sec-natgw-subnet-${var.availability_zones[count.index]}-${random_id.deployment_id.hex}"
@@ -93,16 +93,16 @@ resource "aws_subnet" "sec_natgw_subnet" {
 }
 
 resource "aws_eip" "natgw_eip" {
-  count = length(var.availability_zones)
-  vpc = true
+  count      = length(var.availability_zones)
+  vpc        = true
   depends_on = [aws_vpc.sec_vpc]
 }
 
 resource "aws_nat_gateway" "sec_nat_gw" {
-  count = length(var.availability_zones)
+  count         = length(var.availability_zones)
   allocation_id = aws_eip.natgw_eip[count.index].id
-  subnet_id = aws_subnet.sec_natgw_subnet[count.index].id
-  depends_on = [aws_subnet.sec_natgw_subnet, aws_eip.natgw_eip]
+  subnet_id     = aws_subnet.sec_natgw_subnet[count.index].id
+  depends_on    = [aws_subnet.sec_natgw_subnet, aws_eip.natgw_eip]
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -126,8 +126,8 @@ resource "aws_default_route_table" "main-mgmt-rt" {
 }
 
 resource "aws_route_table_association" "main-mgmt-rt-association" {
-  count = length(var.availability_zones)
-  subnet_id      = aws_subnet.sec_mgmt_subnet[count.index].id
+  count     = length(var.availability_zones)
+  subnet_id = aws_subnet.sec_mgmt_subnet[count.index].id
 
   route_table_id = aws_vpc.sec_vpc.main_route_table_id
 
@@ -147,8 +147,8 @@ resource "aws_route_table" "fw-data-rt" {
 }
 
 resource "aws_route_table_association" "app-data-rt-association" {
-  count = length(var.availability_zones)
-  subnet_id      = aws_subnet.sec_data_subnet[count.index].id
+  count     = length(var.availability_zones)
+  subnet_id = aws_subnet.sec_data_subnet[count.index].id
 
   route_table_id = aws_route_table.fw-data-rt.id
 
@@ -158,11 +158,11 @@ resource "aws_route_table_association" "app-data-rt-association" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_route_table" "agwe-rt" {
-  count = length(var.availability_zones)
+  count  = length(var.availability_zones)
   vpc_id = aws_vpc.sec_vpc.id
 
   route {
-    cidr_block = "0.0.0.0/0"
+    cidr_block     = "0.0.0.0/0"
     nat_gateway_id = aws_nat_gateway.sec_nat_gw[count.index].id
   }
 
@@ -174,8 +174,8 @@ resource "aws_route_table" "agwe-rt" {
 }
 
 resource "aws_route_table_association" "agwe-rt-association" {
-  count = length(var.availability_zones)
-  subnet_id      = aws_subnet.sec_agwe_subnet[count.index].id
+  count     = length(var.availability_zones)
+  subnet_id = aws_subnet.sec_agwe_subnet[count.index].id
 
   route_table_id = aws_route_table.agwe-rt[count.index].id
 
@@ -185,7 +185,7 @@ resource "aws_route_table_association" "agwe-rt-association" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_route_table" "agwe-ew-rt" {
-  count = length(var.availability_zones)
+  count  = length(var.availability_zones)
   vpc_id = aws_vpc.sec_vpc.id
 
   tags = {
@@ -194,8 +194,8 @@ resource "aws_route_table" "agwe-ew-rt" {
 }
 
 resource "aws_route_table_association" "agwe-ew-rt-association" {
-  count = length(var.availability_zones)
-  subnet_id      = aws_subnet.sec_agwe_ew_subnet[count.index].id
+  count     = length(var.availability_zones)
+  subnet_id = aws_subnet.sec_agwe_ew_subnet[count.index].id
 
   route_table_id = aws_route_table.agwe-ew-rt[count.index].id
 
@@ -205,7 +205,7 @@ resource "aws_route_table_association" "agwe-ew-rt-association" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_route_table" "natgw-rt" {
-  count = length(var.availability_zones)
+  count  = length(var.availability_zones)
   vpc_id = aws_vpc.sec_vpc.id
 
   route {
@@ -221,8 +221,8 @@ resource "aws_route_table" "natgw-rt" {
 }
 
 resource "aws_route_table_association" "natgw-rt-association" {
-  count = length(var.availability_zones)
-  subnet_id      = aws_subnet.sec_natgw_subnet[count.index].id
+  count     = length(var.availability_zones)
+  subnet_id = aws_subnet.sec_natgw_subnet[count.index].id
 
   route_table_id = aws_route_table.natgw-rt[count.index].id
 
@@ -232,7 +232,7 @@ resource "aws_route_table_association" "natgw-rt-association" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_route_table" "tgwa-rt" {
-  count = length(var.availability_zones)
+  count  = length(var.availability_zones)
   vpc_id = aws_vpc.sec_vpc.id
 
   tags = {
@@ -243,8 +243,8 @@ resource "aws_route_table" "tgwa-rt" {
 }
 
 resource "aws_route_table_association" "tgwa-rt-association" {
-  count = length(var.availability_zones)
-  subnet_id      = aws_subnet.sec_tgwa_subnet[count.index].id
+  count     = length(var.availability_zones)
+  subnet_id = aws_subnet.sec_tgwa_subnet[count.index].id
 
   route_table_id = aws_route_table.tgwa-rt[count.index].id
 
