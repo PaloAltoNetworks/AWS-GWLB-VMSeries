@@ -246,6 +246,7 @@ Metadata:
 Conditions:
   CreateAttachmentToTGW: !Not [!Equals [!Ref TGWID, ""]]
   BootstrapVmseries: !Not [!Equals [!Ref VmseriesBootstrapS3BucketName, ""]]
+  IsChina: !Equals [ !Sub '${AWS::URLSuffix}', 'amazonaws.com.cn']
 
 # ======================================================================================================================
 #   Resources
@@ -752,65 +753,6 @@ Resources:
                   - ec2:DescribeVpcEndpointServices
                 Resource: "*"
 
-  DescribeGWLBEService:
-    Type: AWS::Lambda::Function
-    Properties:
-      Handler: "index.handler"
-      Role: !GetAtt
-        - DescribeGWLBEServiceLambdaExecutionRole
-        - Arn
-      Code:
-        ZipFile: |
-          import boto3
-          import cfnresponse
-          import json
-          import logging
-          import time
-          def handler(event, context):
-            time.sleep(600)
-            logger = logging.getLogger()
-            logger.setLevel(logging.INFO)
-            responseData = {}
-            responseStatus = cfnresponse.FAILED
-            logger.info('Received event: {}'.format(json.dumps(event)))
-            if event["RequestType"] == "Delete":
-              responseStatus = cfnresponse.SUCCESS
-              cfnresponse.send(event, context, responseStatus, responseData)
-            if event["RequestType"] == "Create":
-              try:
-                VpceServiceId = event["ResourceProperties"]["Input"]
-              except Exception as e:
-                logger.info('VPC Endpoint Service Id retrival failure: {}'.format(e))
-              try:
-                ec2 = boto3.client('ec2')
-              except Exception as e:
-                logger.info('boto3.client failure: {}'.format(e))
-              try:
-                response = ec2.describe_vpc_endpoint_service_configurations(
-                  Filters=[
-                    {
-                      'Name': 'service-id',
-                      'Values': [VpceServiceId]
-                    }
-                  ]
-                )
-              except Exception as e:
-                logger.info('ec2.describe_vpc_endpoint_service_configurations fa: {}'.format(e))
-              ServiceName = response['ServiceConfigurations'][0]['ServiceName']
-              logger.info('service name: {}'.format(ServiceName))
-              responseData['Data'] = ServiceName
-              responseStatus = cfnresponse.SUCCESS
-              cfnresponse.send(event, context, responseStatus, responseData)
-      Runtime: python3.7
-      Timeout: 900
-
-  GWLBESerivceName:
-    DependsOn: GWLBEService
-    Type: Custom::DescribeVpcEndpointServiceConfigurations
-    Properties:
-      ServiceToken: !GetAtt DescribeGWLBEService.Arn
-      Input: !Ref GWLBEService
-
 # ----------------------------------------------------------------------------------------------------------------------
 # Security VPC - Gateway Load Balancer Endpoint
 # ----------------------------------------------------------------------------------------------------------------------
@@ -819,17 +761,31 @@ Resources:
     Type: AWS::EC2::VPCEndpoint
     Properties:
       VpcId: !Ref SecurityVPC
-      ServiceName: !GetAtt GWLBESerivceName.Data
+      ServiceName: !Join
+        - ''
+        - - !If [IsChina, cn.com.amazonaws, com.amazonaws]
+          - .vpce.
+          - !Ref "AWS::Region"
+          - .
+          - !Ref GWLBEService
       VpcEndpointType: GatewayLoadBalancer
       SubnetIds: [ !Ref GWLBESubnetAZ1 ]
+    DependsOn: GWLBEService
 
   GWLBEAZ2:
     Type: AWS::EC2::VPCEndpoint
     Properties:
       VpcId: !Ref SecurityVPC
-      ServiceName: !GetAtt GWLBESerivceName.Data
+      ServiceName: !Join
+        - ''
+        - - !If [IsChina, cn.com.amazonaws, com.amazonaws]
+          - .vpce.
+          - !Ref "AWS::Region"
+          - .
+          - !Ref GWLBEService
       VpcEndpointType: GatewayLoadBalancer
       SubnetIds: [ !Ref GWLBESubnetAZ2 ]
+    DependsOn: GWLBEService
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Security VPC - Management & Data Security Group
@@ -1185,4 +1141,10 @@ Outputs:
 
   GWLBServiceId:
     Description: GWLB Service ID for use for additional GWLB Endpoints
-    Value: !GetAtt GWLBESerivceName.Data
+    Value: !Join
+      - ''
+      - - !If [IsChina, cn.com.amazonaws, com.amazonaws]
+        - .vpce.
+        - !Ref "AWS::Region"
+        - .
+        - !Ref GWLBEService
