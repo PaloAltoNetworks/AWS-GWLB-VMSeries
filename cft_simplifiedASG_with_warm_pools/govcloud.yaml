@@ -1,0 +1,1408 @@
+# Following example shows how to create AWS Gateway Load Balancer (GWLB)
+# Firewall VPC for centralized architecture using AWS CloudFormation. 
+
+# For architecture details refer to blog:
+# https://aws.amazon.com/blogs/networking-and-content-delivery/centralized-inspection-architecture-with-aws-gateway-load-balancer-and-aws-transit-gateway/
+
+# Template uses Amazon Linux 2 instances as Firewalls behind the GWLB.
+# Configures iptables on instances for hairpin setup. The hairpin setup 
+# allows traffic coming from GWLB on Firewall to be sent back to GWLB.
+
+# iptables configuration is for sample purpose only. It allows all the traffic! Use it for GWLB POC only**
+
+AWSTemplateFormatVersion: "2010-09-09"
+
+# Description: >-
+#   AWS CloudFormation Sample Template For Firewall VPC Setup in Centralized
+#   Archite For Gateway Load Balancer (GWLB). It creates a hairpin setup using
+#   iptables. Firewall VPC is created in the same account as Spoke VPCs and
+#   Transit Gateay. 
+  
+#   This template creates:
+      # - 1 VPC
+      # - 1 IGW
+      # - 2 NAT gateways
+      # - 6 subnets, 3 in each Availability Zone (AZ)
+      # - 6 route tables, 3 in each AZ
+      # - 2 Security groups
+      # - ASG of VM-Series Firewalls with support warm pools, scaling policy and metrics
+      #     - [Warm Pools](https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-warm-pools.html)
+      # - 3 Lambda Functions for Lifecylce hooks
+      # - 1 Lambda Function to to update ASG isntance specs after permissions complete
+      # - 3 EventBridge Rules to trigger the lambdas
+      # - 1 Amazon Linux 2 acting as bastion host
+      # - 1 GWLB
+      # - 1 Target group for GWLB 
+      # - 1 Listner for GWLB
+      # - 1 VPC endpoint service
+      # - 2 GWLB endpoints, 1 in each AZ
+  
+#   **WARNING** This template creates one or more Amazon EC2 instances,
+#   GWLB, GWLB endpints and NAT gateways. You will be billed for the AWS 
+#   resources used if you create a stack from this template.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Network Configuration
+        Parameters:
+          - VpcCidr
+          - AvailabilityZone1
+          - TgwAttachSubnet1Cidr
+          - GWLBeSubnet1Cidr
+          - NatgwSubnet1Cidr
+          - AvailabilityZone2
+          - TgwAttachSubnet2Cidr
+          - GWLBeSubnet2Cidr
+          - NatgwSubnet2Cidr
+      - Label:
+          default: Firewall Configuration
+        Parameters:
+          - FirewallInstanceType
+          - FirewallInstanceAmiId          
+          - FirewallInstanceDiskSize
+          - KeyPairName
+          - AccessLocation  
+          - DesiredCapacity  
+          - MinSize
+          - MaxSize  
+          - WarmPoolMinSize
+          - CloudWatchScalingNamespace 
+          - FirewallAmiID   
+          - VMSeriesInstanceType
+          - VmseriesBootstrapS3BucketName
+          - lambdapackagezip
+          - KeyPANWFirewall
+          - KeyPANWPanorama
+          - csplicensekey
+      - Label:
+          default: Gateway Load Balancer Configuration
+        Parameters:
+          - HealthPort
+          - HealthProtocol          
+
+    ParameterLabels:
+      VpcCidr:
+        default: Firewall VPC - Network CIDR for VPC   
+      AvailabilityZone1:
+        default: Firewall VPC - Availability Zone 1
+      TgwAttachSubnet1Cidr:
+        default: Firewall VPC - TGW Attachment Subnet 1 CIDR in AZ1
+      GWLBeSubnet1Cidr:
+        default: Firewall VPC - Firewall Subnet 1 CIDR in AZ1
+      NatgwSubnet1Cidr:
+        default: Firewall VPC - NAT GW Subnet 1 CIDR in AZ1
+      AvailabilityZone2:
+        default: Availability Zone 2        
+      TgwAttachSubnet2Cidr:
+        default: Firewall VPC - TGW Attachment Subnet 2 CIDR in AZ2
+      GWLBeSubnet2Cidr:
+        default: Firewall VPC - Firewall Subnet 2 CIDR in AZ2
+      NatgwSubnet2Cidr:
+        default: Firewall VPC - NAT GW Subnet 2 CIDR in AZ2
+      FirewallInstanceType:
+        default: Firewall Instance Type
+      FirewallInstanceAmiId:
+        default: Latest AMI ID for Firewall (ec2 instance)        
+      FirewallInstanceDiskSize:
+        default: Firewall Instance Size in GB
+      KeyPairName:
+        default: KeyPair required for accessing Firewall instance
+      AccessLocation:
+        default: Network CIDR to access Firewall instance 
+      HealthPort:
+        default: Firewall VPC - Health Check Port
+      HealthProtocol:
+        default: Firewall VPC - Health Check Protocol   
+
+Parameters:
+  VpcCidr:
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+    Default: 192.168.1.0/24
+    Description: Firewall VPC - CIDR block for the VPC
+    Type: String
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/y
+  AvailabilityZone1:
+    Description: Firewall VPC - Availability Zone 1
+    Type: AWS::EC2::AvailabilityZone::Name
+    ConstraintDescription: Valid Availability Zone Id
+  TgwAttachSubnet1Cidr:
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+    Default: 192.168.1.0/28
+    Description: Firewall VPC - TGW Attachment Subnet 1 CIDR in AZ1
+    Type: String
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+  GWLBeSubnet1Cidr:
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+    Default: 192.168.1.16/28
+    Description: Firewall VPC - Firewall Subnet 1 CIDR in AZ1
+    Type: String
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+  NatgwSubnet1Cidr:
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+    Default: 192.168.1.32/28
+    Description: Firewall VPC - NAT GW Subnet 1 CIDR in AZ1
+    Type: String
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28    
+  AvailabilityZone2:
+    Description: Firewall VPC - Availability Zone 2
+    Type: AWS::EC2::AvailabilityZone::Name
+    ConstraintDescription: Valid Availability Zone Id
+  TgwAttachSubnet2Cidr:
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+    Default: 192.168.1.48/28
+    Description: Firewall VPC - TGW Attachment Subnet 2 CIDR in AZ2
+    Type: String
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+  GWLBeSubnet2Cidr:
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+    Default: 192.168.1.64/28
+    Description: Firewall VPC - Firewall Subnet 2 CIDR in AZ2
+    Type: String
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+  NatgwSubnet2Cidr:
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+    Default: 192.168.1.80/28
+    Description: Firewall VPC - NAT GW Subnet 2 CIDR in AZ2
+    Type: String
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28    
+  FirewallInstanceType:
+    Description: Select EC2 instance type for Firewall instance. Default is set to t3.micro
+    Default: t3.micro
+    AllowedValues:
+      - t3.micro
+    Type: String
+  FirewallInstanceAmiId:
+    Description: EC2 Instance AMI ID retrieved using SSM
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'    
+  FirewallInstanceDiskSize:
+    Description: Firewall instance disk size in GB. Default is set to 8GB
+    Default: 8
+    AllowedValues: [8]
+    Type: Number
+    ConstraintDescription: Should be a valid instance size in GB
+  KeyPairName:
+    Description: EC2 KeyPair required for accessing EC2 instance
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: Must be the name of an existing EC2 KeyPair
+  AccessLocation:
+    Description: >-
+      Enter desired Network CIDR to allow traffic to Firewall. Default is set to
+      access from anywhere and it is not recommended
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    MinLength: "9"
+    MaxLength: "18"
+    Default: 0.0.0.0/0
+    Type: String
+    ConstraintDescription: Must be a valid Network CIDR of the form x.x.x.x/y
+  HealthProtocol:
+    Description: >-
+      The protocol GWLB uses when performing health checks on targets.
+      Default is HTTP.
+    Type: String
+    Default: HTTP
+    AllowedValues: ['TCP', 'HTTP', 'HTTPS']
+    ConstraintDescription: Must be a valid health check protocol
+  HealthPort:
+    Description: >- 
+      The port the load balancer uses when performing health checks
+      on targets. Default is 80.
+    Type: String
+    Default: '80'
+    ConstraintDescription: Must be a valid health check port   
+  FirewallAmiID:
+    Description: >- 
+      Firewall AMI ID
+    Type: AWS::EC2::Image::Id
+  VMSeriesInstanceType:  
+    Description: >- 
+      Firewall Instance model
+    Type: String
+    AllowedValues:
+      - m3.xlarge
+      - m3.2xlarge
+      - m4.xlarge
+      - m4.2xlarge
+      - m4.4xlarge
+      - m5.large
+      - m5.xlarge
+      - m5.2xlarge
+      - m5.4xlarge
+      - m5.12xlarge
+      - m5.24xlarge
+      - m5n.large
+      - m5n.xlarge
+      - m5n.2xlarge
+      - m5n.4xlarge
+      - m5n.8xlarge
+      - c3.xlarge
+      - c3.2xlarge
+      - c3.4xlarge
+      - c3.8xlarge
+      - c4.xlarge
+      - c4.2xlarge
+      - c4.4xlarge
+      - c4.8xlarge
+      - c5.xlarge
+      - c5.2xlarge
+      - c5.4xlarge
+      - c5.9xlarge
+      - c5.18xlarge
+      - c5n.xlarge
+      - c5n.2xlarge
+      - c5n.4xlarge
+      - c5n.9xlarge
+      - c5n.18xlarge
+    Default: m5.xlarge    
+  VmseriesBootstrapS3BucketName:
+    Description: >- 
+      Firewall Bootstrap Bucket
+    Type: String  
+  lambdapackagezip:
+    Description: >-
+      Zip file containing the ASG Lambda files
+    Type: String
+    Default: asglambdas.zip 
+  MinSize:
+    Description: >-
+      ASG Min Size
+    Type: Number
+    Default: 0     
+  MaxSize:
+    Description: >-
+      ASG Max Size
+    Type: Number
+    Default: 0  
+  WarmPoolMinSize: 
+    Description: >-
+      Minimum firewalls in the Warm Pool
+    Type: Number
+    Default: 0              
+  DesiredCapacity:
+    Description: >-
+      ASG Desired Size
+    Type: Number
+    Default: 0
+  csplicensekey:
+    Description: >-
+        API Key to DeRegister firewall from CSP.  Leave blank if using PayGo
+    Default: a304904fb7b036f5d320dc8ced49648c5eee25c5ad0221a4b9eea83c207f6950
+    Type: String
+    NoEcho: True
+  KeyPANWFirewall:
+    Description: >-
+        API Key access the firewall.  Should correspond to credentials pushed from Panorama
+    Default: LUFRPT1Zd2pYUGpkMUNrVEZlb3hROEQyUm95dXNGRkU9N0d4RGpTN2VZaVZYMVVoS253U0p6dlk3MkM0SDFySEh2UUR4Y3hzK2g3ST0=
+    Type: String 
+    NoEcho: True  
+  KeyPANWPanorama:
+    Description: >-
+        API Key access the Panorama.  
+    Default: LUFRPT1OcW9tMDN3ZXR4VlNMUjVjQUVKb2RSYmpUSzQ9U0RYZlczdCtmRTJ3NG8rR2lPbVZWWjBnTTVoNjhYYnp3eit0TmdhemVnMjBPRUwySjdVdzZXbFUzeHMxWGZ5TA==
+    Type: String     
+    NoEcho: True       
+  CloudWatchScalingNamespace:
+    Description: >-
+      Add the Name Space configured in the VM-Series Plugi-in for CloudWatch Metrics.
+    Default: gwlbasg1_FW_PANW_ASG
+    Type: String
+             
+Conditions:
+  IsChina: !Equals [ !Sub '${AWS::URLSuffix}', 'amazonaws.com.cn']
+
+
+Resources:
+
+## Create VPC, IGW and associate IGW with VPC:
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ""
+            - - !Sub ${AWS::StackName}
+              - "-vpc"
+  
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ""
+            - - !Sub ${AWS::StackName}
+              - "-igw"
+  
+  AttachInternetGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref InternetGateway
+
+## Create Subnets:
+  # AZ1:
+  TgwAttachSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Ref AvailabilityZone1
+      CidrBlock: !Ref TgwAttachSubnet1Cidr
+      VpcId: !Ref Vpc
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-tgwAttach-sn-az1"
+
+  GWLBeSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Ref AvailabilityZone1
+      CidrBlock: !Ref GWLBeSubnet1Cidr
+      VpcId: !Ref Vpc
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-fw-sn-az1"
+
+  NatgwSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Ref AvailabilityZone1
+      CidrBlock: !Ref NatgwSubnet1Cidr
+      VpcId: !Ref Vpc
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-natgw-sn-az1"      
+  
+  ## AZ2:
+  TgwAttachSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Ref AvailabilityZone2
+      CidrBlock: !Ref TgwAttachSubnet2Cidr
+      VpcId: !Ref Vpc
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-tgwAttach-sn-az2"
+
+  GWLBeSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Ref AvailabilityZone2
+      CidrBlock: !Ref GWLBeSubnet2Cidr
+      VpcId: !Ref Vpc
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-fw-sn-az2"
+
+  NatgwSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Ref AvailabilityZone2
+      CidrBlock: !Ref NatgwSubnet2Cidr
+      VpcId: !Ref Vpc
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-natgw-sn-az2"           
+
+
+## Create NAT Gateways:
+  # AZ1:
+  Eip1:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  Natgw1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt
+        - Eip1
+        - AllocationId
+      SubnetId: !Ref NatgwSubnet1
+      Tags:
+      - Key: Name
+        Value: !Sub "${AWS::StackName}-natgw-az1"
+
+  # AZ2:
+  Eip2:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  Natgw2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt
+        - Eip2
+        - AllocationId
+      SubnetId: !Ref NatgwSubnet2
+      Tags:
+      - Key: Name
+        Value: !Sub "${AWS::StackName}-natgw-az2"
+
+
+## Create Route Tables: 
+  # AZ1:
+  TgwAttachRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-tgwattach-az1-rtb"
+
+  GWLBeRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-gwlbeFW-az1-rtb"
+
+  NatGwRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-natgw-az1-rtb"
+
+  # AZ2:
+  TgwAttachRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-tgwattach-az2-rtb"
+
+  GWLBeRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-gwlbefw-az2-rtb"
+
+  NatGwRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-natgw-az2-rtb"
+
+
+## Associate Subnets with appropriate Route Tables:
+  # AZ1:
+  TgwAttachSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref TgwAttachSubnet1
+      RouteTableId: !Ref TgwAttachRouteTable1
+  
+  GWLBeSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref GWLBeSubnet1
+      RouteTableId: !Ref GWLBeRouteTable1
+
+  NatgwSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref NatgwSubnet1
+      RouteTableId: !Ref NatGwRouteTable1
+
+  # AZ2:
+  TgwAttachSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref TgwAttachSubnet2
+      RouteTableId: !Ref TgwAttachRouteTable2
+  
+  GWLBeSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref GWLBeSubnet2
+      RouteTableId: !Ref GWLBeRouteTable2
+
+  NatgwSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref NatgwSubnet2
+      RouteTableId: !Ref NatGwRouteTable2
+
+
+## Create Security Group:
+  BastionSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref Vpc
+      GroupName: !Sub "${AWS::StackName}-bastion-sg"
+      GroupDescription: >-
+        Access to bastion instance: allow SSH and ICMP access from appropriate location.
+        Allow all traffic from VPC CIDR
+      SecurityGroupIngress:
+        - CidrIp: !Ref AccessLocation
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+        - CidrIp: !Ref AccessLocation
+          IpProtocol: ICMP
+          FromPort: -1
+          ToPort: -1
+        - CidrIp: !Ref VpcCidr
+          IpProtocol: "-1"
+          FromPort: -1
+          ToPort: -1          
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: "-1"
+          FromPort: -1
+          ToPort: -1
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-bastion-sg"
+
+  FirewallSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref Vpc
+      GroupName: !Sub "${AWS::StackName}-app-sg"
+      GroupDescription: >-
+        Access to Firewall instance: allow SSH and ICMP access from Bastion SG.
+        Allow all traffic from VPC CIDR
+      SecurityGroupIngress:
+        - SourceSecurityGroupId: !GetAtt BastionSg.GroupId
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+        - SourceSecurityGroupId: !GetAtt BastionSg.GroupId
+          IpProtocol: ICMP
+          FromPort: -1
+          ToPort: -1
+        - SourceSecurityGroupId: !GetAtt BastionSg.GroupId
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: "-1"
+          FromPort: -1
+          ToPort: -1          
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: "-1"
+          FromPort: -1
+          ToPort: -1
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-app-sg"
+
+
+## Bastion Host
+  BastionHost:
+    DependsOn: NatgwRtb1IgwRoute
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref FirewallInstanceAmiId
+      KeyName: !Ref KeyPairName
+      InstanceType: !Ref FirewallInstanceType
+      SecurityGroupIds:
+        - !Ref BastionSg
+      SubnetId: !Ref NatgwSubnet1
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: !Ref FirewallInstanceDiskSize
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-bastion"
+
+
+## Create Gateway Load Balancer and related resources:
+  Gwlb:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Join 
+        - '-'
+        - - !Sub ${AWS::StackName}
+          - -GWLB
+      Type: gateway
+      LoadBalancerAttributes:
+        - Key: load_balancing.cross_zone.enabled
+          Value: "true"
+      Subnets:
+        - !Ref GWLBeSubnet1
+        - !Ref GWLBeSubnet2
+      Tags:
+      - Key: Name
+        Value: !Join 
+          - '-'
+          - - !Sub ${AWS::StackName}
+            - -GWLB
+
+  TargetGroupASG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Join 
+        - '-'
+        - - !Sub ${AWS::StackName}
+          - -TG
+      Port: 6081
+      Protocol: GENEVE
+      TargetGroupAttributes:
+      - Key: deregistration_delay.timeout_seconds
+        Value: "20"
+      VpcId: !Ref Vpc
+      HealthCheckPort: !Ref HealthPort
+      HealthCheckProtocol: !Ref HealthProtocol
+      TargetType: instance
+      Tags:
+      - Key: Name
+        Value: !Join 
+          - '-'
+          - - !Sub ${AWS::StackName}
+            - -GWLB
+            
+  ListenerASG:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn: !Ref TargetGroupASG
+      LoadBalancerArn: !Ref Gwlb
+
+
+## Create VPC Endpoint Service:
+  VpcEndpointService:
+    Type: AWS::EC2::VPCEndpointService
+    Properties:
+      GatewayLoadBalancerArns:
+        - !Ref Gwlb
+      AcceptanceRequired: false
+
+
+## Create Lambda Custom Resource to retrieve VPC Endpoint Service Name:
+  # VpceServiceLambdaExecutionRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     AssumeRolePolicyDocument:
+  #       Version: 2012-10-17
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             Service:
+  #               - lambda.amazonaws.com
+  #           Action:
+  #             - sts:AssumeRole
+  #     Path: /
+  #     Policies:
+  #       - PolicyName: root
+  #         PolicyDocument:
+  #           Version: 2012-10-17
+  #           Statement:
+  #             - Effect: Allow
+  #               Action:
+  #                 - logs:CreateLogStream
+  #                 - logs:PutLogEvents
+  #               Resource: arn:aws-us-gov:logs:*:*:*
+  #             - Effect: Allow
+  #               Action:
+  #                 - ec2:DescribeVpcEndpointServiceConfigurations
+  #                 - ec2:DescribeVpcEndpointServicePermissions
+  #                 - ec2:DescribeVpcEndpointServices
+  #               Resource: "*"
+
+  # Lambda creates CloudWatch Log Group.
+  # Since CF stack didn't explicitly create the Log Group, Log Group doesn't get deleted when stack is deleted.
+  # Hence creating Log Group though the stack for Lambda specific funciton.
+  # Their are few things to consider. For more details refer to: https://github.com/aws/serverless-application-model/issues/1216
+  # VpceServiceLogGroup:
+  #   Type: AWS::Logs::LogGroup
+  #   Properties:
+  #       LogGroupName: !Sub /aws/lambda/${AWS::StackName}-gwlb-svcname
+  #       RetentionInDays: 1
+
+  # VpceServiceName:
+  #   Type: AWS::Lambda::Function
+  #   DependsOn: VpceServiceLogGroup
+  #   Properties:
+  #     FunctionName: !Sub ${AWS::StackName}-gwlb-service
+  #     Handler: "index.handler"
+  #     Role: !GetAtt VpceServiceLambdaExecutionRole.Arn
+  #     Code:
+  #       ZipFile: |
+  #         import json
+  #         import logging
+  #         import time
+
+  #         import boto3
+  #         import cfnresponse
+  #         from botocore.exceptions import ClientError
+
+  #         try:
+  #             ec2 = boto3.client('ec2')
+  #         except ClientError as e:
+  #             logger.error(f"ERROR: failed to connect to EC2 client: {e}")
+  #             sys.exit(1)              
+
+  #         def handler(event, context):
+  #             logger = logging.getLogger()
+  #             logger.setLevel(logging.INFO)
+  #             logger.info('Received event: {}'.format(json.dumps(event)))
+
+  #             responseData = {}
+  #             responseStatus = cfnresponse.FAILED
+
+  #             try:
+  #                 serviceid = event["ResourceProperties"]["VpceServiceId"]                
+  #             except Exception as e:
+  #                 logger.info('Attribute retrival failure: {}'.format(e))
+
+  #             try:
+  #                 if event["RequestType"] == "Delete":    
+  #                     responseStatus = cfnresponse.SUCCESS
+  #                     cfnresponse.send(event, context, responseStatus, responseData)
+  #             except Exception:
+  #                 logger.exception("Signaling failure to CloudFormation.")
+  #                 cfnresponse.send(event, context, cfnresponse.FAILED, {})
+
+  #             if event["RequestType"] == "Create":
+  #                 logger.info("Retrieving VPC Endpoint Service Name:")
+  #                 try:
+  #                     response = ec2.describe_vpc_endpoint_service_configurations(
+  #                         Filters=[
+  #                             {
+  #                                 'Name': 'service-id',
+  #                                 'Values': [serviceid]
+  #                             }
+  #                         ]
+  #                     )
+  #                 except Exception as e:
+  #                     logger.info('ec2.describe_vpc_endpoint_service_configurations failure: {}'.format(e))
+
+  #                 service_name = response['ServiceConfigurations'][0]['ServiceName']
+
+  #                 time.sleep(120)
+
+  #                 responseData['ServiceName'] = service_name             
+  #                 responseStatus = cfnresponse.SUCCESS
+  #                 cfnresponse.send(event, context, responseStatus, responseData)      
+  #     Runtime: python3.8
+  #     Timeout: 150
+
+  # RetrieveVpceServiceName:
+  #   Type: Custom::RetrieveAttributes
+  #   Properties:
+  #     ServiceToken: !GetAtt VpceServiceName.Arn
+  #     VpceServiceId: !Ref VpcEndpointService
+        
+  asgupdateServiceName:
+    Type: AWS::Lambda::Function
+    Properties:
+      # FunctionName: !Sub ${AWS::StackName}-asg-size-update
+      Handler: asgupdate.lambda_handler
+      Role: !GetAtt asgLambdaRole.Arn
+      Runtime: python3.8
+      Timeout: 150
+      Tags:
+      - Key: Name
+        Value: !Join 
+          - '-'
+          - - !Sub ${AWS::StackName}
+            - update       
+      Code:
+        S3Bucket: !Ref VmseriesBootstrapS3BucketName
+        S3Key: !Ref lambdapackagezip      
+
+  CustomResASG:
+    Type: Custom::SetASGSize
+    DependsOn: 
+      # - asgupdateLogGroup
+      - LambdaWarmPermission
+      - LambdaLaunchPermission
+      - LambdaTerminatePermission     
+    Properties:
+      ServiceToken: !GetAtt asgupdateServiceName.Arn
+      FirewallASGVar: !Ref FirewallASG
+      MinSizeVar: !Ref MinSize       
+      MaxSizeVar: !Ref MaxSize
+      WarmMinSizeVar: !Ref WarmPoolMinSize
+      DesiredCapacityVar: !Ref DesiredCapacity            
+
+
+# Create Gateway Load Balancer Endpoint:
+  GwlbEndpoint1:
+    Type: AWS::EC2::VPCEndpoint
+    DependsOn: VpcEndpointService
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: !Join
+        - ''
+        - - !If [IsChina, cn.com.amazonaws, com.amazonaws]
+          - .vpce.
+          - !Ref "AWS::Region"
+          - .
+          - !Ref VpcEndpointService
+      VpcEndpointType: GatewayLoadBalancer
+      SubnetIds:
+        - !Ref GWLBeSubnet1
+
+  GwlbEndpoint2:
+    Type: AWS::EC2::VPCEndpoint
+    DependsOn: VpcEndpointService
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: !Join
+        - ''
+        - - !If [IsChina, cn.com.amazonaws, com.amazonaws]
+          - .vpce.
+          - !Ref "AWS::Region"
+          - .
+          - !Ref VpcEndpointService
+      VpcEndpointType: GatewayLoadBalancer
+      SubnetIds:
+        - !Ref GWLBeSubnet2
+
+
+## Create appropriate routes for appropriate route tables. Routes with TGW as target are added through TGW template.
+  # AZ1:
+  NatgwRtb1IgwRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachInternetGateway
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref NatGwRouteTable1
+
+  NatgwRtb1Rfc10Route:
+    Type: AWS::EC2::Route
+    # DependsOn: RetrieveVpceServiceName
+    Properties:
+      DestinationCidrBlock: 10.0.0.0/8
+      VpcEndpointId: !Ref GwlbEndpoint1
+      RouteTableId: !Ref NatGwRouteTable1
+
+  NatgwRtb1Rfc172Route:
+    Type: AWS::EC2::Route
+    # DependsOn: RetrieveVpceServiceName
+    Properties:
+      DestinationCidrBlock: 172.16.0.0/12
+      VpcEndpointId: !Ref GwlbEndpoint1
+      RouteTableId: !Ref NatGwRouteTable1
+
+  NatgwRtb1Rfc192Route:
+    Type: AWS::EC2::Route
+    # DependsOn: RetrieveVpceServiceName
+    Properties:
+      DestinationCidrBlock: 192.168.0.0/16
+      VpcEndpointId: !Ref GwlbEndpoint1
+      RouteTableId: !Ref NatGwRouteTable1                  
+
+  GWLBeRtb1Natgw1Route:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref Natgw1
+      RouteTableId: !Ref GWLBeRouteTable1
+  
+  TgwAttachRtb1Gwlbe1Route:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      VpcEndpointId: !Ref GwlbEndpoint1
+      RouteTableId: !Ref TgwAttachRouteTable1
+
+  # AZ2:
+  NatgwRtb2IgwRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachInternetGateway
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref NatGwRouteTable2
+
+  NatgwRtb2Rfc10Route:
+    Type: AWS::EC2::Route
+    # DependsOn: RetrieveVpceServiceName
+    Properties:
+      DestinationCidrBlock: 10.0.0.0/8
+      VpcEndpointId: !Ref GwlbEndpoint2
+      RouteTableId: !Ref NatGwRouteTable2
+
+  NatgwRtb2Rfc172Route:
+    Type: AWS::EC2::Route
+    # DependsOn: RetrieveVpceServiceName
+    Properties:
+      DestinationCidrBlock: 172.16.0.0/12
+      VpcEndpointId: !Ref GwlbEndpoint2
+      RouteTableId: !Ref NatGwRouteTable2
+
+  NatgwRtb2Rfc192Route:
+    Type: AWS::EC2::Route
+    # DependsOn: RetrieveVpceServiceName
+    Properties:
+      DestinationCidrBlock: 192.168.0.0/16
+      VpcEndpointId: !Ref GwlbEndpoint2
+      RouteTableId: !Ref NatGwRouteTable2      
+
+  FirewallRtb2Natgw2Route:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref Natgw2
+      RouteTableId: !Ref GWLBeRouteTable2
+  
+  TgwAttachRtb2Gwlbe2Route:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      VpcEndpointId: !Ref GwlbEndpoint2
+      RouteTableId: !Ref TgwAttachRouteTable2
+
+
+##   VM-Series Bootstrap IAM Role
+  VmseriesBootstrapRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: !Join  
+          - '-'
+          - - !Sub ${AWS::StackName}
+            - VMSeriesBootstrapRole        
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: s3:ListBucket
+                Resource: !Join
+                  - ''
+                  - - 'arn:aws-us-gov:s3:::'
+                    - !Ref VmseriesBootstrapS3BucketName
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: !Join
+                  - ''
+                  - - 'arn:aws-us-gov:s3:::'
+                    - !Ref VmseriesBootstrapS3BucketName
+                    - /*
+              - Effect: Allow
+                Action:
+                  - cloudwatch:*
+                Resource:
+                  - '*'
+
+  VmseriesBootstrapInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref VmseriesBootstrapRole  
+
+
+## Lambda Invoke Permissions
+  LambdaWarmPermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !GetAtt 
+        - AddWarmLambda
+        - Arn
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt WarmEventBridge.Arn
+  LambdaLaunchPermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !GetAtt 
+        - AddLaunchLambda
+        - Arn
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt LaunchEventBridge.Arn
+  LambdaTerminatePermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !GetAtt 
+        - TerminateLambda
+        - Arn
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt TerminateventBridge.Arn
+            
+
+##   asgLambda IAM Role
+  asgLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws-us-gov:iam::aws:policy/AmazonEC2ReadOnlyAccess
+        - arn:aws-us-gov:iam::aws:policy/AmazonS3ReadOnlyAccess
+      Policies:
+        - PolicyName: !Join  
+          - '-'
+          - - !Sub ${AWS::StackName}
+            - LambdaExecRole  
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - iam:UpdateAssumeRolePolicy
+                  - iam:GetRole
+                  - iam:PassRole
+                  - iam:CreateServiceLinkedRole
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                  - iam:UpdateAssumeRolePolicy
+                  - iam:GetRole
+                  - iam:PassRole
+                  - iam:CreateServiceLinkedRole
+                  - events:*
+                  - cloudwatch:*
+                  - autoscaling:*
+                  - elasticloadbalancing:*
+                  - cloudformation:DescribeStacks
+                  - ec2:CreateNetworkInterface
+                  - ec2:DeleteNetworkInterface
+                  - ec2:AttachNetworkInterface
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:DetachNetworkInterface
+                  - ec2:ModifyNetworkInterfaceAttribute
+                  - ec2:DescribeNetworkInterfaceAttribute
+                Resource: 
+                  - "*"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - arn:aws-us-gov:logs:*:*:*
+
+
+
+## Create Lambda Functions for Lifecycle Hooks
+  AddWarmLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Handler: asgwarm.lambda_handler
+      Role: !GetAtt 
+        - asgLambdaRole
+        - Arn
+      Code:
+        S3Bucket: !Ref VmseriesBootstrapS3BucketName
+        S3Key: !Ref lambdapackagezip
+      Runtime: python3.8
+      Timeout: 900
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref FirewallSg
+        SubnetIds:
+          - !Ref GWLBeSubnet1
+          - !Ref GWLBeSubnet2      
+      Tags:
+      - Key: Name
+        Value: !Join 
+          - '-'
+          - - !Sub ${AWS::StackName}
+            - Warm      
+  AddLaunchLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Handler: asglaunch.lambda_handler
+      Role: !GetAtt 
+        - asgLambdaRole
+        - Arn
+      Code:
+        S3Bucket: !Ref VmseriesBootstrapS3BucketName
+        S3Key: !Ref lambdapackagezip
+      Runtime: python3.8
+      Timeout: 900 
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref FirewallSg
+        SubnetIds:
+          - !Ref GWLBeSubnet1
+          - !Ref GWLBeSubnet2            
+      Tags:
+      - Key: Name
+        Value: !Join 
+          - '-'
+          - - !Sub ${AWS::StackName}
+            - Launch       
+  TerminateLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Handler: asgterminate.lambda_handler
+      Role: !GetAtt 
+        - asgLambdaRole
+        - Arn
+      Code:
+        S3Bucket: !Ref VmseriesBootstrapS3BucketName
+        S3Key: !Ref lambdapackagezip
+      Runtime: python3.8
+      Timeout: 300  
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref FirewallSg
+        SubnetIds:
+          - !Ref GWLBeSubnet1
+          - !Ref GWLBeSubnet2        
+      Tags:
+      - Key: Name
+        Value: !Join 
+          - '-'
+          - - !Sub ${AWS::StackName}
+            - Terminate     
+            
+## Firewall Launch Template
+  FirewallTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub ${AWS::StackName}-Launch-template
+      LaunchTemplateData:
+        IamInstanceProfile:
+          Arn: !GetAtt
+            - VmseriesBootstrapInstanceProfile
+            - Arn
+        DisableApiTermination: false
+        ImageId: !Ref FirewallAmiID
+        InstanceType: !Ref VMSeriesInstanceType
+        KeyName: !Ref KeyPairName
+        UserData:  !Base64
+          Fn::Join:
+            - ''
+            - - vmseries-bootstrap-aws-s3bucket=
+              - !Ref VmseriesBootstrapS3BucketName                     
+        NetworkInterfaces:
+          - Description: !Sub ${AWS::StackName}-FW-Data
+            DeleteOnTermination: True
+            DeviceIndex: 0
+            Groups:
+              - !Ref FirewallSg
+          - Description: !Sub ${AWS::StackName}-FW-Mgmt
+            DeleteOnTermination: True
+            DeviceIndex: 1
+            Groups:
+              - !Ref FirewallSg 
+
+              
+
+
+## Autoscale Group
+  FirewallASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Sub ${AWS::StackName}-ASG
+      AvailabilityZones:
+        - !Ref AvailabilityZone1
+        - !Ref AvailabilityZone2
+      HealthCheckGracePeriod: 300
+      HealthCheckType: ELB
+      LaunchTemplate: 
+        LaunchTemplateId: !Ref FirewallTemplate
+        Version: !GetAtt FirewallTemplate.DefaultVersionNumber
+      MaxSize: '0'
+      MinSize: '0'
+      MetricsCollection:
+        - Granularity: 1Minute
+          Metrics:
+            - GroupMinSize
+            - GroupMaxSize      
+      Tags:    
+        - Key: Name
+          PropagateAtLaunch: True
+          Value: !Join 
+            - '-'
+            - - !Sub ${AWS::StackName}
+              - FW   
+      TargetGroupARNs: 
+        - !Ref TargetGroupASG
+      VPCZoneIdentifier:
+        - !Ref GWLBeSubnet1
+        - !Ref GWLBeSubnet2
+      LifecycleHookSpecificationList:  
+        - LifecycleHookName: !Sub ${AWS::StackName}-Launch-Hook
+          LifecycleTransition: autoscaling:EC2_INSTANCE_LAUNCHING
+          DefaultResult: ABANDON
+          HeartbeatTimeout: 2700
+          NotificationMetadata: !Join
+          - ''
+          - - '{"csplicensekey": "'
+            - !Ref csplicensekey
+            - '", "s3bucket": "'    
+            - !Ref VmseriesBootstrapS3BucketName  
+            - '", "KeyPANWFirewall": "'    
+            - !Ref KeyPANWFirewall  
+            - '", "KeyPANWPanorama": "'    
+            - !Ref KeyPANWPanorama                                  
+            - '" }'
+        - LifecycleHookName: !Sub ${AWS::StackName}-Terminate-Hook
+          LifecycleTransition: autoscaling:EC2_INSTANCE_TERMINATING
+          DefaultResult: CONTINUE
+          HeartbeatTimeout: 900
+          NotificationMetadata: !Join
+          - ''
+          - - '{"csplicensekey": "'
+            - !Ref csplicensekey
+            - '", "s3bucket": "'    
+            - !Ref VmseriesBootstrapS3BucketName  
+            - '", "KeyPANWFirewall": "'    
+            - !Ref KeyPANWFirewall  
+            - '", "KeyPANWPanorama": "'    
+            - !Ref KeyPANWPanorama                                  
+            - '" }'     
+
+## EventBridge Rules
+  WarmEventBridge:
+    Type: AWS::Events::Rule
+    Properties: 
+      Description: EventBridge Rule to fire Warming Lambda from Lifecycle Hook
+      EventPattern: !Join  
+        - ''
+        - - '{"source": ["aws.autoscaling"], '
+          - '"detail-type": ["EC2 Instance-launch Lifecycle Action"], '
+          - '"detail": { "Origin": ["EC2"], "AutoScalingGroupName": ["'
+          - !Ref FirewallASG
+          - '"],    "Destination": ["WarmPool"]  }}'
+      Name: !Sub ${AWS::StackName}-Warm-EventBridge
+      State: ENABLED
+      Targets: 
+        - Arn: !GetAtt AddWarmLambda.Arn
+          Id: "1"
+  LaunchEventBridge:
+    Type: AWS::Events::Rule
+    Properties: 
+      Description: EventBridge Rule to fire Launch Lambda from Lifecycle Hook
+      EventPattern: !Join  
+        - ''
+        - - '{"source": ["aws.autoscaling"], '
+          - '"detail-type": ["EC2 Instance-launch Lifecycle Action"], '
+          - '"detail": { "AutoScalingGroupName": ["'
+          - !Ref FirewallASG
+          - '"],    "Destination": ["AutoScalingGroup"]  }}'
+      Name: !Sub ${AWS::StackName}-Launch-EventBridge
+      State: ENABLED
+      Targets: 
+        - Arn: !GetAtt AddLaunchLambda.Arn
+          Id: "1"    
+  TerminateventBridge:
+    Type: AWS::Events::Rule
+    Properties: 
+      Description: EventBridge Rule to fire Terminate Lambda from Lifecycle Hook
+      EventPattern: !Join  
+        - ''
+        - - '{"source": ["aws.autoscaling"], '
+          - '"detail-type": ["EC2 Instance-terminate Lifecycle Action"], '
+          - '"detail": { "AutoScalingGroupName": ["'
+          - !Ref FirewallASG
+          - '"] }}'
+      Name: !Sub ${AWS::StackName}-Terminate-EventBridge
+      State: ENABLED
+      Targets: 
+        - Arn: !GetAtt TerminateLambda.Arn
+          Id: "1"    
+
+
+## Scaling Policies                      
+  ScaleUpASG:
+    Type: 'AWS::AutoScaling::ScalingPolicy'
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref FirewallASG
+      ScalingAdjustment: 1
+      Cooldown: '600'
+  ScaleDownASG:
+    Type: 'AWS::AutoScaling::ScalingPolicy'
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref FirewallASG
+      ScalingAdjustment: -1
+      Cooldown: '600'      
+
+
+## CloudWatch Alarms
+  ScaleUpAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties: 
+      ActionsEnabled: True
+      AlarmActions: 
+        - !Ref ScaleUpASG
+      AlarmDescription: Scale up ASG based on high Dataplane CPU
+      AlarmName: !Sub ${AWS::StackName}-ScaleUp-Alarm
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value: !Ref FirewallASG
+      Unit: Percent
+      Period: 900
+      MetricName: panSessionUtilization
+      TreatMissingData: missing
+      Namespace: !Ref CloudWatchScalingNamespace
+      EvaluationPeriods: 1
+      Statistic: Average
+      Threshold: 60
+
+  ScaleDownAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties: 
+      ActionsEnabled: True
+      AlarmActions: 
+        - !Ref ScaleDownASG
+      AlarmDescription: Scale down ASG based on low Dataplane CPU
+      AlarmName: !Sub ${AWS::StackName}-ScaleDown-Alarm
+      ComparisonOperator: LessThanThreshold
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value: !Ref FirewallASG
+      Unit: Percent
+      Period: 1800
+      MetricName: panSessionUtilization
+      TreatMissingData: missing
+      Namespace: !Ref CloudWatchScalingNamespace
+      EvaluationPeriods: 1
+      Statistic: Average
+      Threshold: 50
+
+
+Outputs:
+  FirewallVpcCidr:
+    Description: Firewall VPC CIDR
+    Value: !Ref VpcCidr
+  FirewallVpcId:
+    Description: Firewall VPC ID
+    Value: !Ref Vpc
+  FirewallBastionHostPublicIp:
+    Description: Firewall VPC Bastion Instance Public IP
+    Value: !GetAtt BastionHost.PublicIp     
+  # GWLBServiceName:
+  #   Description: GWLB Service Name
+  #   Value: !GetAtt RetrieveVpceServiceName.ServiceName
+ 
