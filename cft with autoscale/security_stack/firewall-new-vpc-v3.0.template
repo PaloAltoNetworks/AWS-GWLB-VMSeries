@@ -526,7 +526,7 @@
        "Condition" : "CreateSubnet3more",
        "Properties" : {
           "AllocationId" : { "Fn::GetAtt" : ["EIP3", "AllocationId"]},
-          "SubnetId" : { "Ref" : "NATGWSubnetAz1"}
+          "SubnetId" : { "Ref" : "NATGWSubnetAz3"}
        },
        "DependsOn" : [ "VPC", "EIP3", "NATGWSubnetAz3", "GatewayToInternet" ]
     },
