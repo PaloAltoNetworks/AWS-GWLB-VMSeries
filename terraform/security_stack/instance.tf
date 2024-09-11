@@ -6,7 +6,7 @@
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_network_interface" "fw-mgmt-eni" {
-  count = length(var.availability_zones)
+  count             = length(var.availability_zones)
   subnet_id         = aws_subnet.sec_mgmt_subnet[count.index].id
   security_groups   = [aws_security_group.fw-mgmt-sg.id]
   source_dest_check = "false"
@@ -16,7 +16,7 @@ resource "aws_network_interface" "fw-mgmt-eni" {
 }
 
 resource "aws_network_interface" "fw-data-eni" {
-  count = length(var.availability_zones)
+  count             = length(var.availability_zones)
   subnet_id         = aws_subnet.sec_data_subnet[count.index].id
   security_groups   = [aws_security_group.fw-data-sg.id]
   source_dest_check = "false"
@@ -26,7 +26,7 @@ resource "aws_network_interface" "fw-data-eni" {
 }
 
 resource "aws_eip" "fw-mgmt-eip" {
-  count = length(var.availability_zones)
+  count             = length(var.availability_zones)
   vpc               = true
   network_interface = aws_network_interface.fw-mgmt-eni[count.index].id
   tags = {
@@ -70,8 +70,8 @@ EOF
 }
 
 resource "aws_iam_policy" "fw-iam-policy" {
-  name = "iam-policy-${random_id.deployment_id.hex}"
-  path = "/"
+  name        = "iam-policy-${random_id.deployment_id.hex}"
+  path        = "/"
   description = "IAM Policy for VM-Series Firewall"
 
   policy = <<EOF
@@ -130,9 +130,9 @@ resource "aws_iam_instance_profile" "iam-instance-profile" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_instance" "firewall_instance" {
-  count = length(var.availability_zones)
-  ami        = var.firewall_ami_id
-  instance_type   = var.instance_type
+  count         = length(var.availability_zones)
+  ami           = var.firewall_ami_id
+  instance_type = var.instance_type
 
   network_interface {
     network_interface_id = aws_network_interface.fw-data-eni[count.index].id
@@ -144,9 +144,9 @@ resource "aws_instance" "firewall_instance" {
     device_index         = 1
   }
   iam_instance_profile = aws_iam_instance_profile.iam-instance-profile.id
-  user_data = "mgmt-interface-swap=enable\nplugin-op-commands=aws-gwlb-inspect:enable\n${var.user_data}"
+  user_data            = "mgmt-interface-swap=enable\nplugin-op-commands=aws-gwlb-inspect:enable\n${var.user_data}"
 
-  key_name        = aws_key_pair.fw-ssh-keypair.key_name
+  key_name = aws_key_pair.fw-ssh-keypair.key_name
   tags = {
     Name = "FW-${var.availability_zones[count.index]}-${random_id.deployment_id.hex}"
   }

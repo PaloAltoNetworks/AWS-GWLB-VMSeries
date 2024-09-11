@@ -8,24 +8,24 @@ data "template_file" "handoff-state-file" {
 
 locals {
   output_json_str = jsonencode({
-    "access_key" = var.access_key
-    "secret_key" = var.secret_key
-    "region" = var.region
-    "deployment_id" = random_id.deployment_id.hex
-    "app_vpc" = aws_vpc.app_vpc.id
-    "app_agwe_subnet" = aws_subnet.app_agwe_subnet.id
-    "igw_route_table_id" = aws_route_table.igw-rt.id
+    "access_key"           = var.access_key
+    "secret_key"           = var.secret_key
+    "region"               = var.region
+    "deployment_id"        = random_id.deployment_id.hex
+    "app_vpc"              = aws_vpc.app_vpc.id
+    "app_agwe_subnet"      = aws_subnet.app_agwe_subnet.id
+    "igw_route_table_id"   = aws_route_table.igw-rt.id
     "app_data_subnet_cidr" = aws_subnet.alb_subnet[*].cidr_block
-    "alb_route_table_id" = aws_route_table.app-alb-rt.id
-    "app_vpc_cidr" = aws_vpc.app_vpc.cidr_block
+    "alb_route_table_id"   = aws_route_table.app-alb-rt.id
+    "app_vpc_cidr"         = aws_vpc.app_vpc.cidr_block
 
-    "agwe_service_id" = var.gwlbe_service_id
-    "agwe_service_name" = var.gwlbe_service_name
+    "agwe_service_id"          = var.gwlbe_service_id
+    "agwe_service_name"        = var.gwlbe_service_name
     "sec_natgw_route_table_id" = var.natgw_route_table_id
-    "sec_agwe_ob_id" = var.sec_gwlbe_ob_id
-    "sec_agwe_ew_id" = var.sec_gwlbe_ew_id
-    "sec_tgwa_route_table_id" = var.sec_tgwa_route_table_id
-    "agwe_id" = ""
+    "sec_agwe_ob_id"           = var.sec_gwlbe_ob_id
+    "sec_agwe_ew_id"           = var.sec_gwlbe_ew_id
+    "sec_tgwa_route_table_id"  = var.sec_tgwa_route_table_id
+    "agwe_id"                  = ""
   })
 }
 
@@ -46,7 +46,7 @@ resource "null_resource" "gateway-load-balancer-endpoint" {
     command = "python3 gwlbe.py create"
   }
   provisioner "local-exec" {
-    when = destroy
+    when    = destroy
     command = "python3 gwlbe.py destroy"
   }
   depends_on = [null_resource.handoff-state-json]
@@ -57,7 +57,7 @@ resource "null_resource" "gateway-load-balancer-endpoint" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 data "local_file" "gwlbe" {
-  filename = data.template_file.handoff-state-file.rendered
+  filename   = data.template_file.handoff-state-file.rendered
   depends_on = [null_resource.gateway-load-balancer-endpoint]
 }
 
@@ -68,17 +68,17 @@ data "local_file" "gwlbe" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_route" "sec-agwe-ew-to-tgw" {
-  count = length(var.sec_gwlbe_ew_route_table_id)
-  route_table_id = var.sec_gwlbe_ew_route_table_id[count.index]
-  destination_cidr_block    = aws_vpc.app_vpc.cidr_block
-  transit_gateway_id = var.tgw_id
-  depends_on = [data.local_file.gwlbe]
+  count                  = length(var.sec_gwlbe_ew_route_table_id)
+  route_table_id         = var.sec_gwlbe_ew_route_table_id[count.index]
+  destination_cidr_block = aws_vpc.app_vpc.cidr_block
+  transit_gateway_id     = var.tgw_id
+  depends_on             = [data.local_file.gwlbe]
 }
 
 resource "aws_route" "sec-agwe-ob-to-tgw" {
-  count = length(var.sec_gwlbe_ob_route_table_id)
-  route_table_id = var.sec_gwlbe_ob_route_table_id[count.index]
-  destination_cidr_block    = aws_vpc.app_vpc.cidr_block
-  transit_gateway_id = var.tgw_id
-  depends_on = [data.local_file.gwlbe]
+  count                  = length(var.sec_gwlbe_ob_route_table_id)
+  route_table_id         = var.sec_gwlbe_ob_route_table_id[count.index]
+  destination_cidr_block = aws_vpc.app_vpc.cidr_block
+  transit_gateway_id     = var.tgw_id
+  depends_on             = [data.local_file.gwlbe]
 }

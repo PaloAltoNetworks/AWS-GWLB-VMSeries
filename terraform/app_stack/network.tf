@@ -25,7 +25,7 @@ resource "aws_internet_gateway" "app_vpc_igw" {
 
 resource "aws_subnet" "app_subnet" {
   vpc_id            = aws_vpc.app_vpc.id
-  cidr_block        = cidrsubnet(join("/",[split("/", aws_vpc.app_vpc.cidr_block)[0], "25"]), 3, 0)
+  cidr_block        = cidrsubnet(join("/", [split("/", aws_vpc.app_vpc.cidr_block)[0], "25"]), 3, 0)
   availability_zone = var.availability_zone
   tags = {
     Name = "app-main-subnet-${random_id.deployment_id.hex}"
@@ -35,7 +35,7 @@ resource "aws_subnet" "app_subnet" {
 
 resource "aws_subnet" "app_agwe_subnet" {
   vpc_id            = aws_vpc.app_vpc.id
-  cidr_block        = cidrsubnet(join("/",[split("/", aws_vpc.app_vpc.cidr_block)[0], "25"]), 3, 1)
+  cidr_block        = cidrsubnet(join("/", [split("/", aws_vpc.app_vpc.cidr_block)[0], "25"]), 3, 1)
   availability_zone = var.availability_zone
   tags = {
     Name = "app-gwlbe-subnet-${random_id.deployment_id.hex}"
@@ -44,12 +44,12 @@ resource "aws_subnet" "app_agwe_subnet" {
 }
 
 resource "aws_subnet" "alb_subnet" {
-  count = length(data.aws_availability_zones.available.names)
+  count             = length(data.aws_availability_zones.available.names)
   vpc_id            = aws_vpc.app_vpc.id
-  cidr_block        = cidrsubnet(join("/",[split("/", aws_vpc.app_vpc.cidr_block)[0], "25"]), 3, 2+count.index)
+  cidr_block        = cidrsubnet(join("/", [split("/", aws_vpc.app_vpc.cidr_block)[0], "25"]), 3, 2 + count.index)
   availability_zone = data.aws_availability_zones.available.names[count.index]
   tags = {
-    Name = "app-alb-${count.index}-subnet-${random_id.deployment_id.hex}"
+    Name   = "app-alb-${count.index}-subnet-${random_id.deployment_id.hex}"
     UsedBy = "ALB"
   }
   depends_on = [aws_vpc.app_vpc]
@@ -71,12 +71,12 @@ data "aws_subnet_ids" "alb_subnet_ids" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_ec2_transit_gateway_vpc_attachment" "tgw-attachment" {
-  subnet_ids         = [aws_subnet.app_subnet.id]
-  transit_gateway_id = var.tgw_id
-  vpc_id             = aws_vpc.app_vpc.id
+  subnet_ids                                      = [aws_subnet.app_subnet.id]
+  transit_gateway_id                              = var.tgw_id
+  vpc_id                                          = aws_vpc.app_vpc.id
   transit_gateway_default_route_table_association = "false"
   transit_gateway_default_route_table_propagation = "false"
-  tags               = {
+  tags = {
     Name = "client-server-${random_id.deployment_id.hex}"
   }
 }
@@ -124,16 +124,16 @@ resource "aws_route_table_association" "main-mgmt-rt-association" {
 }
 
 resource "aws_route" "app-mgmt" {
-  count = length(var.app_mgmt_sg_list)
-  route_table_id = aws_default_route_table.app-main-rt.id
-  gateway_id = aws_internet_gateway.app_vpc_igw.id
+  count                  = length(var.app_mgmt_sg_list)
+  route_table_id         = aws_default_route_table.app-main-rt.id
+  gateway_id             = aws_internet_gateway.app_vpc_igw.id
   destination_cidr_block = var.app_mgmt_sg_list[count.index]
-  depends_on = [aws_default_route_table.app-main-rt, aws_route_table_association.main-mgmt-rt-association]
+  depends_on             = [aws_default_route_table.app-main-rt, aws_route_table_association.main-mgmt-rt-association]
 }
 
 resource "aws_route" "app-ob" {
-  route_table_id = aws_default_route_table.app-main-rt.id
-  transit_gateway_id = var.tgw_id
+  route_table_id         = aws_default_route_table.app-main-rt.id
+  transit_gateway_id     = var.tgw_id
   destination_cidr_block = "0.0.0.0/0"
 }
 
@@ -147,7 +147,7 @@ resource "aws_route_table" "app-alb-rt" {
 }
 
 resource "aws_route_table_association" "app-data-rt-association" {
-  count = length(data.aws_availability_zones.available.names)
+  count          = length(data.aws_availability_zones.available.names)
   subnet_id      = aws_subnet.alb_subnet[count.index].id
   route_table_id = aws_route_table.app-alb-rt.id
 }
